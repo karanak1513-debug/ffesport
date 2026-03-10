@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Crosshair, Users, ChevronRight } from 'lucide-react';
+import { Trophy, Crosshair, Users, ChevronRight, Medal } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import './Home.css';
 
@@ -24,16 +24,29 @@ const Home = () => {
                 <div className="tournament-schedule text-sm text-muted mb-3">
                     <p>📅 {t.date} | ⏰ {t.exactTime || t.time}</p>
                 </div>
-                <div className="tournament-meta">
-                    <div className="meta-item">
-                        <span className="meta-label">Prize Pool</span>
-                        <span className="meta-value text-gradient">{t.prize}</span>
+
+                {t.status === 'completed' && t.winners ? (
+                    <div className="winners-preview mb-3 p-2 rounded bg-dark-soft border-primary-subtle border">
+                        <div className="d-flex align-center gap-2 text-xs text-warning font-bold mb-1">
+                            <Medal size={14} /> OFFICIAL WINNERS
+                        </div>
+                        <div className="text-sm font-bold text-gradient">
+                            🏆 {t.winners.first}
+                        </div>
                     </div>
-                    <div className="meta-item">
-                        <span className="meta-label">Entry Fee</span>
-                        <span className="meta-value">{t.entry}</span>
+                ) : (
+                    <div className="tournament-meta">
+                        <div className="meta-item">
+                            <span className="meta-label">Prize Pool</span>
+                            <span className="meta-value text-gradient">{t.prize}</span>
+                        </div>
+                        <div className="meta-item">
+                            <span className="meta-label">Entry Fee</span>
+                            <span className="meta-value">{t.entry}</span>
+                        </div>
                     </div>
-                </div>
+                )}
+
                 <div className="progress-container">
                     <div className="progress-labels">
                         <span>Players Joined</span>
@@ -46,7 +59,7 @@ const Home = () => {
             </div>
             <div className="card-footer">
                 {t.status === 'completed' ? (
-                    <Link to={`/tournament/${t.id}/results`} className="btn btn-outline w-100">
+                    <Link to={`/tournament/${t.id}`} className="btn btn-outline w-100">
                         View Results
                     </Link>
                 ) : (

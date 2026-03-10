@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Copy, ShieldAlert, Timer, CheckCircle, Smartphone, Lock } from 'lucide-react';
+import { Copy, ShieldAlert, Timer, CheckCircle, Smartphone, Lock, Trophy, Medal } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import './MatchRoom.css';
 
@@ -24,16 +24,15 @@ const MatchRoom = () => {
         return <div className="container p-5 text-center"><h2>Match Not Found</h2></div>;
     }
 
-    // Security Check: Is user registered?
-    // For this prototype, we check if there's an entry for this tournament in the database
-    // In a real app with Auth, we'd check against the logged-in user's UID
+    // Security Check
     const isPlayerJoined = entries.some(e => String(e.tournamentId) === String(id));
 
-    // Release Timer Logic (10 mins = 600,000 ms)
+    // Release Timer Logic
     const matchTime = new Date(`${tournament.date} ${tournament.exactTime || tournament.time}`).getTime();
     const releaseTime = matchTime - (10 * 60 * 1000);
     const isReleased = currentTime >= releaseTime;
     const isStarted = currentTime >= matchTime;
+    const isCompleted = tournament.status === 'completed';
 
     const timeLeftToStarts = Math.max(0, Math.floor((matchTime - currentTime) / 1000));
     const formatTime = (seconds) => {
@@ -58,8 +57,8 @@ const MatchRoom = () => {
             <div className="container match-room-container">
                 <div className="text-center mb-5">
                     <div className="status-indicator">
-                        <span className={`live-dot-large ${isStarted ? 'live' : 'waiting'}`}></span>
-                        {isStarted ? 'Match Started' : 'Waiting for Players'}
+                        <span className={`live-dot-large ${isCompleted ? 'completed' : isStarted ? 'live' : 'waiting'}`}></span>
+                        {isCompleted ? 'Match Completed' : isStarted ? 'Match Started' : 'Waiting for Players'}
                     </div>
                     <h1 className="room-title">{tournament.name} <span className="text-gradient">Room</span></h1>
                     <p className="text-muted text-lg mt-2">{tournament.gameMode} • {tournament.map || 'Bermuda'}</p>
@@ -71,6 +70,37 @@ const MatchRoom = () => {
                         <h2 className="text-xl font-bold mb-2">Access Denied</h2>
                         <p className="text-muted mb-4">You must join this tournament to see the Room ID and Password.</p>
                         <Link to={`/tournament/${id}`} className="btn btn-primary">Join Tournament</Link>
+                    </div>
+                ) : isCompleted ? (
+                    <div className="winners-announcement glass-panel p-5 text-center fade-in">
+                        <Trophy size={64} className="text-warning mx-auto mb-4" />
+                        <h2 className="text-3xl font-bold mb-2">Official Results Out!</h2>
+                        <p className="text-muted mb-5">Congratulations to all the warriors who participated.</p>
+
+                        <div className="winners-podium d-flex justify-center gap-4 flex-wrap">
+                            <div className="podium-card gold glass-panel p-4">
+                                <Medal size={40} className="text-warning mb-2 mx-auto" />
+                                <h4 className="rank">1st Place</h4>
+                                <h3 className="winner-name text-gradient">{tournament.winners?.first || "TBD"}</h3>
+                            </div>
+                            {tournament.winners?.second && (
+                                <div className="podium-card silver glass-panel p-4">
+                                    <Medal size={40} className="text-muted mb-2 mx-auto" />
+                                    <h4 className="rank">2nd Place</h4>
+                                    <h3 className="winner-name">{tournament.winners.second}</h3>
+                                </div>
+                            )}
+                            {tournament.winners?.third && (
+                                <div className="podium-card bronze glass-panel p-4">
+                                    <Medal size={40} className="text-secondary mb-2 mx-auto" />
+                                    <h4 className="rank">3rd Place</h4>
+                                    <h3 className="winner-name">{tournament.winners.third}</h3>
+                                </div>
+                            )}
+                        </div>
+                        <div className="mt-5">
+                            <Link to="/" className="btn btn-primary">Back to Home</Link>
+                        </div>
                     </div>
                 ) : (
                     <div className="room-grid">

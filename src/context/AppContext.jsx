@@ -89,7 +89,7 @@ export const AppProvider = ({ children }) => {
     };
 
     const createTournament = async (newT) => {
-        try { await addDoc(collection(db, 'tournaments'), { ...newT, players: 0, status: 'upcoming', createdAt: Date.now(), roomId: '', roomPassword: '' }); }
+        try { await addDoc(collection(db, 'tournaments'), { ...newT, players: 0, status: 'upcoming', createdAt: Date.now(), roomId: '', roomPassword: '', winners: null }); }
         catch (error) { console.error(error); }
     };
 
@@ -101,7 +101,6 @@ export const AppProvider = ({ children }) => {
     const approvePayment = async (paymentId, tournamentId, userId) => {
         try {
             await updateDoc(doc(db, 'payments', paymentId), { status: 'approved' });
-            // Find the entry for this user and tournament and approve it
             const entriesRef = collection(db, 'entries');
             const q = query(entriesRef, where('tournamentId', '==', tournamentId), where('userId', '==', userId));
             const querySnapshot = await getDocs(q);
@@ -121,8 +120,8 @@ export const AppProvider = ({ children }) => {
         catch (error) { console.error(error); }
     };
 
-    const endMatch = async (id) => {
-        try { await updateDoc(doc(db, 'tournaments', id), { status: 'completed' }); }
+    const endWithWinners = async (id, winners) => {
+        try { await updateDoc(doc(db, 'tournaments', id), { status: 'completed', winners }); }
         catch (error) { console.error(error); }
     };
 
@@ -143,7 +142,7 @@ export const AppProvider = ({ children }) => {
         <AppContext.Provider value={{
             tournaments, users, entries, payments, uidSubmissions,
             joinTournament, createTournament, updateRoomDetails,
-            approvePayment, rejectPayment, startMatch, endMatch,
+            approvePayment, rejectPayment, startMatch, endMatch: endWithWinners,
             deleteTournament, deleteUser, toggleUserStatus
         }}>
             {children}
