@@ -1,5 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const AppContext = createContext();
 
@@ -13,62 +15,136 @@ export const AppProvider = ({ children }) => {
         { id: 102, name: "Solo King Championship", date: "Oct 22, 2024", result: "Lost", points: 20, prize: "-" },
     ]);
 
-    // Tournaments list
-    const [tournaments, setTournaments] = useState([]);
+    // Firestore Collections State
+    const [rawTournaments, setRawTournaments] = useState([]);
+    const [users, setUsers] = useState([]);
+    const [entries, setEntries] = useState([]);
+    const [payments, setPayments] = useState([]);
+    const [uidSubmissions, setUidSubmissions] = useState([]);
 
-    // Join a tournament (Guest)
-    const joinTournament = (tournamentId) => {
-        const tIndex = tournaments.findIndex(t => t.id === Number(tournamentId));
-        if (tIndex > -1) {
-            setTournaments(prev => {
-                const newT = [...prev];
-                newT[tIndex] = { ...newT[tIndex], players: newT[tIndex].players + 1 };
-                return newT;
-            });
+    const [currentTime, setCurrentTime] = useState(Date.now());
+
+    // Listeners
+    useEffect(() => {
+        const q = query(collection(db, 'users'), orderBy('joinedAt', 'desc'));
+        return onSnapshot(q, (s) => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    }, []);
+
+    useEffect(() => {
+        const q = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'));
+        return onSnapshot(q, (s) => setRawTournaments(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    }, []);
+
+    useEffect(() => {
+        const q = query(collection(db, 'entries'), orderBy('joinTime', 'desc'));
+        return onSnapshot(q, (s) => setEntries(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    }, []);
+
+    useEffect(() => {
+        const q = query(collection(db, 'payments'), orderBy('submittedAt', 'desc'));
+        return onSnapshot(q, (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    }, []);
+
+    useEffect(() => {
+        const q = query(collection(db, 'uid_submissions'), orderBy('submitTime', 'desc'));
+        return onSnapshot(q, (s) => setUidSubmissions(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    }, []);
+
+    // Interval for status
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(Date.now()), 10000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const tournaments = rawTournaments.map(t => {
+        if (t.status === 'completed' || t.status === 'closed') return t;
+        try {
+            let finalDateStr = t.date;
+            if (t.date && t.date.toLowerCase() === 'today') finalDateStr = new Date().toDateString();
+            let parsedTime = null;
+            if (t.date && t.date.includes('-')) {
+                const timePart = t.exactTime ? (t.exactTime.includes('AM') || t.exactTime.includes('PM') ? t.exactTime : `${t.exactTime}:00`) : '00:00:00';
+                parsedTime = new Date(`${t.date}T${timePart.replace(' AM', '').replace(' PM', '')}`).getTime();
+            } else {
+                parsedTime = new Date(`${finalDateStr} ${t.exactTime || '00:00'}`).getTime();
+            }
+            if (parsedTime && !isNaN(parsedTime) && currentTime >= parsedTime) return { ...t, status: 'live' };
+        } catch { /* ignore */ }
+        return { ...t, status: 'upcoming' };
+    });
+
+    // Actions
+    const joinTournament = async (tournamentId, playerData) => {
+        try {
+            const userId = playerData.userId || `guest_${Date.now()}`;
+            await addDoc(collection(db, 'entries'), { tournamentId, userId, username: playerData.name, paymentStatus: 'pending', joinTime: Date.now() });
+            await addDoc(collection(db, 'payments'), { tournamentId, userId, username: playerData.name, amount: playerData.entryFee, screenshot: playerData.screenshotId, status: 'pending', submittedAt: Date.now() });
+            await addDoc(collection(db, 'uid_submissions'), { tournamentId, userId, freeFireUID: playerData.ffuid, submitTime: Date.now() });
+
+            const tRef = doc(db, 'tournaments', tournamentId);
+            const tData = rawTournaments.find(t => t.id === tournamentId);
+            await updateDoc(tRef, { players: (tData?.players || 0) + 1 });
             return true;
-        }
-        return false;
+        } catch (error) { console.error(error); return false; }
     };
 
-    // Admin Create Tournament
-    const createTournament = (newT) => {
-        setTournaments([
-            { ...newT, id: Date.now(), players: 0, status: 'upcoming', game: 'Free Fire', perspective: 'TPP', time: 'Upcoming' },
-            ...tournaments
-        ]);
+    const createTournament = async (newT) => {
+        try { await addDoc(collection(db, 'tournaments'), { ...newT, players: 0, status: 'upcoming', createdAt: Date.now(), roomId: '', roomPassword: '' }); }
+        catch (error) { console.error(error); }
     };
 
-    // Admin Edit Tournament
-    const editTournament = (id, updatedT) => {
-        setTournaments(prev => prev.map(t => t.id === id ? { ...t, ...updatedT } : t));
+    const updateRoomDetails = async (id, roomId, roomPassword) => {
+        try { await updateDoc(doc(db, 'tournaments', id), { roomId, roomPassword }); }
+        catch (error) { console.error(error); }
     };
 
-    // Admin Delete Tournament
-    const deleteTournament = (id) => {
-        setTournaments(prev => prev.filter(t => t.id !== id));
+    const approvePayment = async (paymentId, tournamentId, userId) => {
+        try {
+            await updateDoc(doc(db, 'payments', paymentId), { status: 'approved' });
+            // Find the entry for this user and tournament and approve it
+            const entriesRef = collection(db, 'entries');
+            const q = query(entriesRef, where('tournamentId', '==', tournamentId), where('userId', '==', userId));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach(async (d) => {
+                await updateDoc(doc(db, 'entries', d.id), { paymentStatus: 'approved' });
+            });
+        } catch (error) { console.error(error); }
     };
 
-    // Admin Close Registration
-    const closeRegistration = (id) => {
-        setTournaments(prev => prev.map(t => t.id === id ? { ...t, status: 'closed', time: 'Registration Closed' } : t));
+    const rejectPayment = async (paymentId) => {
+        try { await updateDoc(doc(db, 'payments', paymentId), { status: 'rejected' }); }
+        catch (error) { console.error(error); }
     };
 
-    // Admin update result (mock)
-    const setTournamentResult = (tId) => {
-        setTournaments(prev => prev.map(t => t.id === tId ? { ...t, status: 'completed', time: 'Completed' } : t));
+    const startMatch = async (id) => {
+        try { await updateDoc(doc(db, 'tournaments', id), { status: 'live' }); }
+        catch (error) { console.error(error); }
+    };
+
+    const endMatch = async (id) => {
+        try { await updateDoc(doc(db, 'tournaments', id), { status: 'completed' }); }
+        catch (error) { console.error(error); }
+    };
+
+    const deleteTournament = async (id) => {
+        try { await deleteDoc(doc(db, 'tournaments', id)); }
+        catch (error) { console.error(error); }
+    };
+
+    const deleteUser = async (uId) => {
+        if (window.confirm("Delete?")) await deleteDoc(doc(db, 'users', uId));
+    };
+
+    const toggleUserStatus = async (uId, status) => {
+        await updateDoc(doc(db, 'users', uId), { status: status === 'Active' ? 'Banned' : 'Active' });
     };
 
     return (
         <AppContext.Provider value={{
-            tournaments,
-            matchHistory,
-            setMatchHistory,
-            joinTournament,
-            createTournament,
-            editTournament,
-            deleteTournament,
-            closeRegistration,
-            setTournamentResult
+            tournaments, users, entries, payments, uidSubmissions,
+            joinTournament, createTournament, updateRoomDetails,
+            approvePayment, rejectPayment, startMatch, endMatch,
+            deleteTournament, deleteUser, toggleUserStatus
         }}>
             {children}
         </AppContext.Provider>

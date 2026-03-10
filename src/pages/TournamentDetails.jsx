@@ -14,17 +14,12 @@ const TournamentDetails = () => {
 
     const { tournaments, joinTournament } = useApp();
 
-    // Find the real tournament or fallback
-    const tournament = tournaments.find(t => t.id === Number(id)) || {
-        ...tournaments[0],
-        id: id,
-        prizes: [
-            { rank: "1st Prize", amount: "₹2,500" },
-            { rank: "2nd Prize", amount: "₹1,000" },
-        ]
-    };
+    const tournament = tournaments.find(t => String(t.id) === String(id));
 
-    // If actual tournament doesn't have prizes mock array, create it
+    if (!tournament) {
+        return <div className="container p-5 text-center"><h2>Tournament not found</h2></div>;
+    }
+
     const activePrizes = tournament.prizes || [
         { rank: "1st Prize", amount: "₹2,500" },
         { rank: "2nd Prize", amount: "₹1,000" },
@@ -41,12 +36,18 @@ const TournamentDetails = () => {
         setFormData(prev => ({ ...prev, [name]: files ? files[0] : value }));
     };
 
-    const handleGuestJoinSubmit = (e) => {
+    const handleGuestJoinSubmit = async (e) => {
         e.preventDefault();
 
-        // For now, bypass real upload and just join
-        // Later this will sync with Firestore pending 'payments' logic
-        const success = joinTournament(tournament.id);
+        const playerData = {
+            name: formData.name,
+            ffuid: formData.ffuid,
+            team: formData.team,
+            entryFee: tournament.entry,
+            screenshotId: formData.screenshot ? `ss_${Date.now()}` : 'no_file'
+        };
+
+        const success = await joinTournament(tournament.id, playerData);
         if (success) {
             setJoined(true);
             setShowPayment(false);
@@ -54,7 +55,7 @@ const TournamentDetails = () => {
                 navigate(`/match-room/${tournament.id}`);
             }, 1500);
         } else {
-            alert("Unexpected error joining.");
+            alert("Error joining. Please try again.");
         }
     };
 
@@ -67,11 +68,11 @@ const TournamentDetails = () => {
                         <ArrowLeft size={16} /> Back to Tournaments
                     </Link>
                     <div className="td-header-content">
-                        <span className="status-badge live mb-3" style={{ display: 'inline-block' }}>{tournament.status}</span>
+                        <span className={`status-badge ${tournament.status} mb-3`} style={{ display: 'inline-block' }}>{tournament.status}</span>
                         <h1 className="td-title text-gradient">{tournament.name}</h1>
                         <div className="td-meta-row">
                             <span><Clock size={16} /> {tournament.date} at {tournament.exactTime || tournament.time}</span>
-                            <span><Map size={16} /> Map: {tournament.map}</span>
+                            <span><Map size={16} /> Map: {tournament.map || 'Bermuda'}</span>
                             <span><Users size={16} /> Mode: {tournament.mode}</span>
                         </div>
                         <div className="mt-3">
@@ -89,7 +90,7 @@ const TournamentDetails = () => {
                             <div className="prize-grid">
                                 <div className="prize-total w-100 mb-4 text-center">
                                     <span className="text-muted text-uppercase text-sm">Total Prize Pool</span>
-                                    <h2 className="text-success text-3xl">{tournament.prize}</h2>
+                                    <h2 className="text-success text-3xl">{tournament.prize || tournament.prizePool}</h2>
                                 </div>
                                 {activePrizes.map((p, index) => (
                                     <div key={index} className="prize-item">
@@ -117,20 +118,20 @@ const TournamentDetails = () => {
                         <div className="join-card glass-panel sticky-top">
                             <div className="spots-info text-center mb-4">
                                 <div className="spots-circle">
-                                    <span className="current-spots">{tournament.players}</span>
+                                    <span className="current-spots">{tournament.players || 0}</span>
                                     <span className="slash">/</span>
-                                    <span className="total-spots text-muted">{tournament.maxPlayers}</span>
+                                    <span className="total-spots text-muted">{tournament.maxPlayers || 48}</span>
                                 </div>
                                 <p className="text-muted mt-2">Players Registered</p>
                                 <div className="progress-bar mt-3">
-                                    <div className="progress-fill" style={{ width: `${(tournament.players / tournament.maxPlayers) * 100}%` }}></div>
+                                    <div className="progress-fill" style={{ width: `${((tournament.players || 0) / (tournament.maxPlayers || 48)) * 100}%` }}></div>
                                 </div>
                             </div>
 
                             <div className="payment-summary mb-4">
                                 <div className="d-flex justify-between mb-2">
                                     <span className="text-muted">Entry Fee</span>
-                                    <span className="font-bold">{tournament.entry}</span>
+                                    <span className="font-bold">{tournament.entry || tournament.entryFee}</span>
                                 </div>
                             </div>
 
@@ -142,7 +143,7 @@ const TournamentDetails = () => {
                                 <button
                                     className="btn btn-primary w-100 btn-lg"
                                     onClick={handleJoinClick}
-                                    disabled={tournament.players >= tournament.maxPlayers}
+                                    disabled={(tournament.players || 0) >= (tournament.maxPlayers || 48)}
                                 >
                                     Confirm Registration
                                 </button>
@@ -176,24 +177,6 @@ const TournamentDetails = () => {
                                 <label style={{ fontSize: '12px', color: '#aaa', marginBottom: '5px', display: 'block' }}>Team Name (Optional)</label>
                                 <input type="text" name="team" placeholder="Your Squad Name" className="w-100 p-2 rounded bg-dark border-secondary text-white" value={formData.team} onChange={handleFormChange} />
                             </div>
-
-                            {parseInt(tournament.entry?.replace('₹', '')) > 0 && (
-                                <div className="payment-section text-center p-3 mb-4 rounded" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                    <p className="mb-2">Entry Fee: <strong className="text-success">{tournament.entry}</strong></p>
-                                    <p className="text-sm text-muted mb-2">Scan QR or use {tournament.paymentMethod || 'UPI'} ID: <strong>{tournament.paymentId || 'firebattle@upi'}</strong></p>
-                                    <div className="qr-container mb-3 mx-auto" style={{ background: '#fff', padding: '10px', borderRadius: '10px', display: 'inline-block' }}>
-                                        {tournament.qrCodeImage ? (
-                                            <img src={tournament.qrCodeImage} alt="Payment QR" style={{ width: '120px', height: '120px', objectFit: 'contain' }} />
-                                        ) : (
-                                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=upi://pay?pa=${tournament.paymentId || 'firebattle@upi'}&pn=FireBattleArena&am=${parseInt(tournament.entry?.replace('₹', ''))}`} alt="Payment QR" />
-                                        )}
-                                    </div>
-                                    <div className="form-group text-left mt-2">
-                                        <label style={{ fontSize: '12px', color: '#aaa', marginBottom: '5px', display: 'block' }}>Upload Payment Screenshot *</label>
-                                        <input type="file" name="screenshot" accept="image/*" required className="w-100 p-2 rounded bg-dark border-secondary text-white text-sm" onChange={handleFormChange} />
-                                    </div>
-                                </div>
-                            )}
 
                             <button type="submit" className="btn btn-primary w-100 btn-lg mt-2">
                                 Submit Join Request

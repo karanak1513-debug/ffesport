@@ -80,12 +80,15 @@ const Tournaments = () => {
                                 <div className="card-header">
                                     <span className={`status-badge ${t.status}`}>
                                         {t.status === 'live' && <span className="live-dot"></span>}
-                                        {t.time}
+                                        {t.status === 'live' ? 'Live Now' : t.status === 'upcoming' ? 'Upcoming' : 'Completed'}
                                     </span>
                                     <span className="mode-badge">{t.mode}</span>
                                 </div>
                                 <div className="card-body">
                                     <h3 className="tournament-name">{t.name}</h3>
+                                    <div className="tournament-schedule text-sm text-muted mb-3 mt-2">
+                                        <p>📅 {t.date} | ⏰ {t.exactTime || t.time}</p>
+                                    </div>
                                     <div className="mb-3 mt-2">
                                         {(t.status === 'live' || t.status === 'upcoming') && (
                                             <CountdownTimer dateStr={t.date} timeStr={t.exactTime || t.time} />
@@ -103,11 +106,11 @@ const Tournaments = () => {
                                     </div>
                                     <div className="progress-container">
                                         <div className="progress-labels">
-                                            <span>Players</span>
-                                            <span>{t.players}</span>
+                                            <span>Players Joined</span>
+                                            <span>{t.players} / {t.maxPlayers}</span>
                                         </div>
                                         <div className="progress-bar">
-                                            <div className="progress-fill" style={{ width: '75%' }}></div>
+                                            <div className="progress-fill" style={{ width: `${(t.players / t.maxPlayers) * 100}%` }}></div>
                                         </div>
                                     </div>
                                 </div>

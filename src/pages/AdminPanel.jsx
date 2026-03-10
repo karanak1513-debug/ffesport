@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, Users as UsersIcon, Swords, Trophy, DollarSign, Settings, Plus, Search, Edit2, Trash2, XCircle } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, Swords, Trophy, DollarSign, Settings, Plus, Search, Edit2, Trash2, XCircle, Play, Square, Key, Award, CheckCircle, X, Eye } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import CreateTournamentModal from '../components/CreateTournamentModal';
 import './AdminPanel.css';
@@ -7,20 +7,37 @@ import './AdminPanel.css';
 const AdminPanel = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const { tournaments, deleteTournament, closeRegistration } = useApp();
 
-    const handleEdit = (id) => {
-        alert(`Edit functionality will open a modal with populated details for ID: ${id}.`);
+    const {
+        tournaments,
+        deleteTournament,
+        users,
+        deleteUser,
+        toggleUserStatus,
+        startMatch,
+        endMatch,
+        payments,
+        uidSubmissions,
+        updateRoomDetails,
+        approvePayment,
+        rejectPayment
+    } = useApp();
+
+    const handleSetRoom = (tId) => {
+        const roomId = prompt("Enter Room ID:");
+        const roomPass = prompt("Enter Room Password:");
+        if (roomId && roomPass) {
+            updateRoomDetails(tId, roomId, roomPass);
+            alert("Room details updated successfully!");
+        }
     };
 
-    // Removed inline prompt creation
-
-    // Derived stats
+    // Derived stats from real data
     const stats = [
-        { title: "Total Users", value: "1,245", icon: <UsersIcon size={24} />, color: "text-primary" },
-        { title: "Active Tournaments", value: tournaments.length, icon: <Swords size={24} />, color: "text-warning" },
-        { title: "Matches Completed", value: "348", icon: <Trophy size={24} />, color: "text-success" },
-        { title: "Total Revenue", value: "₹45,200", icon: <DollarSign size={24} />, color: "text-secondary" },
+        { title: "Total Users", value: users.length || "0", icon: <UsersIcon size={24} />, color: "text-primary" },
+        { title: "Active Tournaments", value: tournaments.filter(t => t.status === 'upcoming' || t.status === 'live').length || "0", icon: <Swords size={24} />, color: "text-warning" },
+        { title: "Matches Completed", value: tournaments.filter(t => t.status === 'completed').length || "0", icon: <Trophy size={24} />, color: "text-success" },
+        { title: "Total Payments", value: payments.length || "0", icon: <DollarSign size={24} />, color: "text-secondary" },
     ];
 
     return (
@@ -40,11 +57,11 @@ const AdminPanel = () => {
                         <button className={`admin-nav-link ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
                             <UsersIcon size={18} /> Users
                         </button>
-                        <button className={`admin-nav-link ${activeTab === 'results' ? 'active' : ''}`} onClick={() => setActiveTab('results')}>
-                            <Trophy size={18} /> Match Results
+                        <button className={`admin-nav-link ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}>
+                            <DollarSign size={18} /> Payments
                         </button>
-                        <button className="admin-nav-link mt-auto hover-danger">
-                            <Settings size={18} /> Settings
+                        <button className={`admin-nav-link ${activeTab === 'submissions' ? 'active' : ''}`} onClick={() => setActiveTab('submissions')}>
+                            <Key size={18} /> UID Submissions
                         </button>
                     </nav>
                 </aside>
@@ -53,7 +70,7 @@ const AdminPanel = () => {
                     <div className="admin-header glass-panel mb-4">
                         <h2 className="admin-title text-capitalize">{activeTab} Management</h2>
                         <div className="admin-profile">
-                            <span className="text-muted mr-3">Welcome, SuperAdmin</span>
+                            <span className="text-muted mr-3">Super Admin</span>
                             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin" alt="Admin" className="admin-avatar" />
                         </div>
                     </div>
@@ -90,36 +107,131 @@ const AdminPanel = () => {
                                 <table className="admin-table">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
                                             <th>Name</th>
                                             <th>Status</th>
                                             <th>Players</th>
-                                            <th>Entry / Prize</th>
+                                            <th>Registration</th>
+                                            <th>Room Details</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {tournaments.map(t => (
                                             <tr key={t.id}>
-                                                <td>#{t.id}</td>
                                                 <td className="font-bold">{t.name}</td>
                                                 <td>
-                                                    <span className={`status-badge ${t.status?.toLowerCase()}`}>{t.status || 'Live'}</span>
+                                                    <span className={`status-badge ${t.status?.toLowerCase()}`}>{t.status}</span>
                                                 </td>
-                                                <td>{t.players}/{t.maxPlayers}</td>
-                                                <td>{t.entry} / {t.prize}</td>
+                                                <td>{t.players}/{t.maxPlayers || 48}</td>
+                                                <td>{t.matchDate} @ {t.exactTime || t.time}</td>
+                                                <td className="text-sm">
+                                                    {t.roomId ? <span className="text-success">ID: {t.roomId}</span> : <span className="text-muted">Not Set</span>}
+                                                </td>
                                                 <td>
-                                                    <button className="btn-link text-primary mr-2" onClick={() => handleEdit(t.id)} title="Edit"><Edit2 size={16} /></button>
-                                                    <button className="btn-link text-warning mr-2" onClick={() => closeRegistration(t.id)} title="Close Registrations"><XCircle size={16} /></button>
-                                                    <button className="btn-link text-danger" onClick={() => { if (window.confirm('Delete tournament?')) deleteTournament(t.id) }} title="Delete"><Trash2 size={16} /></button>
+                                                    <div className="d-flex gap-2">
+                                                        <button className="btn-link text-success" onClick={() => startMatch(t.id)} title="Start Match"><Play size={16} /></button>
+                                                        <button className="btn-link text-warning" onClick={() => handleSetRoom(t.id)} title="Set Room Credentials"><Key size={16} /></button>
+                                                        <button className="btn-link text-danger" onClick={() => endMatch(t.id)} title="End Match"><Square size={16} /></button>
+                                                        <button className="btn-link text-muted" onClick={() => { if (window.confirm('Delete?')) deleteTournament(t.id) }}><Trash2 size={16} /></button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
-                                        {tournaments.length === 0 && (
-                                            <tr>
-                                                <td colSpan="6" className="text-center text-muted p-4">No tournaments available. Create one!</td>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'users' && (
+                        <div className="admin-tab fade-in">
+                            <div className="glass-panel admin-table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>FF UID</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {users.map(u => (
+                                            <tr key={u.id}>
+                                                <td className="font-bold">{u.username || u.name}</td>
+                                                <td>{u.freeFireUID || u.ffUid || 'N/A'}</td>
+                                                <td>{u.role || 'Player'}</td>
+                                                <td><span className={`status-badge ${u.status === 'Active' ? 'success' : 'danger'}`}>{u.status || 'Active'}</span></td>
+                                                <td>
+                                                    <button className="btn-link text-danger mr-2" onClick={() => toggleUserStatus(u.id, u.status || 'Active')}><XCircle size={16} /></button>
+                                                    <button className="btn-link text-muted" onClick={() => deleteUser(u.id)}><Trash2 size={16} /></button>
+                                                </td>
                                             </tr>
-                                        )}
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'payments' && (
+                        <div className="admin-tab fade-in">
+                            <div className="glass-panel admin-table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Tournament</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Proof</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {payments.map(p => (
+                                            <tr key={p.id}>
+                                                <td>{p.username}</td>
+                                                <td>{tournaments.find(t => t.id === p.tournamentId)?.name || 'Unknown'}</td>
+                                                <td>{p.amount}</td>
+                                                <td><span className={`status-badge ${p.status?.toLowerCase()}`}>{p.status}</span></td>
+                                                <td><button className="btn btn-outline btn-sm"><Eye size={14} className="mr-1" /> View</button></td>
+                                                <td>
+                                                    <div className="d-flex gap-2">
+                                                        <button className="btn-link text-success" onClick={() => approvePayment(p.id, p.tournamentId, p.userId)}><CheckCircle size={18} /></button>
+                                                        <button className="btn-link text-danger" onClick={() => rejectPayment(p.id)}><X size={18} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'submissions' && (
+                        <div className="admin-tab fade-in">
+                            <div className="glass-panel admin-table-container">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>User ID</th>
+                                            <th>Free Fire UID</th>
+                                            <th>Tournament</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {uidSubmissions.map(s => (
+                                            <tr key={s.id}>
+                                                <td>{s.userId}</td>
+                                                <td className="text-gradient font-bold">{s.freeFireUID}</td>
+                                                <td>{tournaments.find(t => t.id === s.tournamentId)?.name || 'Unknown'}</td>
+                                                <td>{new Date(s.submitTime).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>

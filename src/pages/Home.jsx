@@ -6,7 +6,57 @@ import './Home.css';
 
 const Home = () => {
     const { tournaments } = useApp();
-    const liveTournaments = tournaments.filter(t => t.status !== 'completed').slice(0, 3);
+    const liveMatches = tournaments.filter(t => t.status === 'live');
+    const upcomingMatches = tournaments.filter(t => t.status === 'upcoming');
+    const completedMatches = tournaments.filter(t => t.status === 'completed');
+
+    const TournamentCard = ({ t }) => (
+        <div key={t.id} className="tournament-card glass-panel">
+            <div className="card-header">
+                <span className={`status-badge ${t.status}`}>
+                    {t.status === 'live' && <span className="live-dot"></span>}
+                    {t.status === 'live' ? 'Live Now' : t.status === 'upcoming' ? 'Upcoming' : 'Completed'}
+                </span>
+                <span className="mode-badge">{t.mode}</span>
+            </div>
+            <div className="card-body">
+                <h3 className="tournament-name">{t.name}</h3>
+                <div className="tournament-schedule text-sm text-muted mb-3">
+                    <p>📅 {t.date} | ⏰ {t.exactTime || t.time}</p>
+                </div>
+                <div className="tournament-meta">
+                    <div className="meta-item">
+                        <span className="meta-label">Prize Pool</span>
+                        <span className="meta-value text-gradient">{t.prize}</span>
+                    </div>
+                    <div className="meta-item">
+                        <span className="meta-label">Entry Fee</span>
+                        <span className="meta-value">{t.entry}</span>
+                    </div>
+                </div>
+                <div className="progress-container">
+                    <div className="progress-labels">
+                        <span>Players Joined</span>
+                        <span>{t.players} / {t.maxPlayers}</span>
+                    </div>
+                    <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${(t.players / t.maxPlayers) * 100}%` }}></div>
+                    </div>
+                </div>
+            </div>
+            <div className="card-footer">
+                {t.status === 'completed' ? (
+                    <Link to={`/tournament/${t.id}/results`} className="btn btn-outline w-100">
+                        View Results
+                    </Link>
+                ) : (
+                    <Link to={`/tournament/${t.id}`} className="btn btn-primary w-100">
+                        Join Match
+                    </Link>
+                )}
+            </div>
+        </div>
+    );
 
     return (
         <div className="home-page">
@@ -47,63 +97,67 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* Live Tournaments Section */}
+            {/* Live Matches */}
             <section className="section tournaments-section">
                 <div className="container">
                     <div className="section-header">
                         <div>
-                            <h2 className="section-title">Live & Upcoming <span className="text-gradient">Matches</span></h2>
-                            <p className="text-muted">Register before the slots are full!</p>
+                            <h2 className="section-title">🔴 LIVE <span className="text-gradient">MATCHES</span></h2>
+                            <p className="text-muted">Matches currently in progress. Watch and learn!</p>
+                        </div>
+                    </div>
+                    <div className="tournaments-grid">
+                        {liveMatches.length === 0 ? (
+                            <div className="text-center p-4 glass-panel w-100" style={{ gridColumn: '1 / -1' }}>
+                                <p className="text-muted">No live matches at the moment.</p>
+                            </div>
+                        ) : (
+                            liveMatches.map(t => <TournamentCard key={t.id} t={t} />)
+                        )}
+                    </div>
+                </div>
+            </section>
+
+            {/* Upcoming Matches */}
+            <section className="section tournaments-section bg-darker">
+                <div className="container">
+                    <div className="section-header">
+                        <div>
+                            <h2 className="section-title">📅 UPCOMING <span className="text-gradient">MATCHES</span></h2>
+                            <p className="text-muted">Register now before slots are full!</p>
                         </div>
                         <Link to="/tournaments" className="btn btn-outline view-all-btn">
                             View All <ChevronRight size={16} />
                         </Link>
                     </div>
-
                     <div className="tournaments-grid">
-                        {liveTournaments.length === 0 ? (
-                            <div className="text-center p-5 glass-panel w-100" style={{ gridColumn: '1 / -1' }}>
-                                <h3 className="text-muted">No tournaments available. Check back later.</h3>
+                        {upcomingMatches.length === 0 ? (
+                            <div className="text-center p-4 glass-panel w-100" style={{ gridColumn: '1 / -1' }}>
+                                <p className="text-muted">No upcoming tournaments. Stay tuned!</p>
                             </div>
                         ) : (
-                            liveTournaments.map(t => (
-                                <div key={t.id} className="tournament-card glass-panel">
-                                    <div className="card-header">
-                                        <span className={`status-badge ${t.time === 'Live Now' ? 'live' : 'upcoming'}`}>
-                                            {t.time === 'Live Now' && <span className="live-dot"></span>}
-                                            {t.time}
-                                        </span>
-                                        <span className="mode-badge">{t.mode}</span>
-                                    </div>
-                                    <div className="card-body">
-                                        <h3 className="tournament-name">{t.name}</h3>
-                                        <div className="tournament-meta">
-                                            <div className="meta-item">
-                                                <span className="meta-label">Prize Pool</span>
-                                                <span className="meta-value text-gradient">{t.prize}</span>
-                                            </div>
-                                            <div className="meta-item">
-                                                <span className="meta-label">Entry Fee</span>
-                                                <span className="meta-value">{t.entry}</span>
-                                            </div>
-                                        </div>
-                                        <div className="progress-container">
-                                            <div className="progress-labels">
-                                                <span>Players</span>
-                                                <span>{t.players}</span>
-                                            </div>
-                                            <div className="progress-bar">
-                                                <div className="progress-fill" style={{ width: `${(t.players / t.maxPlayers) * 100}%` }}></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="card-footer">
-                                        <Link to={`/tournament/${t.id}`} className="btn btn-primary w-100">
-                                            Join Match
-                                        </Link>
-                                    </div>
-                                </div>
-                            ))
+                            upcomingMatches.map(t => <TournamentCard key={t.id} t={t} />)
+                        )}
+                    </div>
+                </div>
+            </section>
+
+            {/* Completed Matches */}
+            <section className="section tournaments-section">
+                <div className="container">
+                    <div className="section-header">
+                        <div>
+                            <h2 className="section-title">🏆 COMPLETED <span className="text-gradient">MATCHES</span></h2>
+                            <p className="text-muted">Browse past winners and results.</p>
+                        </div>
+                    </div>
+                    <div className="tournaments-grid">
+                        {completedMatches.length === 0 ? (
+                            <div className="text-center p-4 glass-panel w-100" style={{ gridColumn: '1 / -1' }}>
+                                <p className="text-muted">No matches completed yet.</p>
+                            </div>
+                        ) : (
+                            completedMatches.slice(0, 3).map(t => <TournamentCard key={t.id} t={t} />)
                         )}
                     </div>
                 </div>

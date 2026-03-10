@@ -1,0 +1,104 @@
+.login-page {
+    min-height: calc(100vh - 80px - 200px);
+    padding: 4rem 1rem;
+    background: radial-gradient(circle at center, rgba(var(--color-primary-rgb), 0.05) 0%, transparent 70%);
+}
+
+.login-card {
+    max-width: 450px;
+    width: 100%;
+    padding: 3rem 2rem;
+    border-top: 3px solid var(--color-primary);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    animation: slideUp 0.5s ease-out;
+}
+
+.auth-icon-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(var(--color-primary-rgb), 0.1);
+    border: 1px solid rgba(var(--color-primary-rgb), 0.3);
+    box-shadow: 0 0 20px rgba(var(--color-primary-rgb), 0.2);
+}
+
+.error-alert {
+    background: rgba(239, 68, 68, 0.1);
+    color: #fca5a5;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border-left: 3px solid #ef4444;
+    font-size: 0.9rem;
+    text-align: center;
+    animation: shake 0.4s ease-in-out;
+}
+
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 1rem;
+    color: #9ca3af;
+}
+
+.form-control.with-icon {
+    padding-left: 2.8rem;
+    padding-right: 2.8rem;
+}
+
+.toggle-password-btn {
+    position: absolute;
+    right: 1rem;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: color 0.3s;
+}
+
+.toggle-password-btn:hover {
+    color: var(--color-text);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-5px);
+    }
+
+    50% {
+        transform: translateX(5px);
+    }
+
+    75% {
+        transform: translateX(-5px);
+    }
+}
