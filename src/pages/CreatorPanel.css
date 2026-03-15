@@ -1,0 +1,66 @@
+/* Reuse Admin Styles where possible, customize for Creator specific needs */
+.creator-profit-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 255, 136, 0.05);
+    padding: 8px 16px;
+    border-radius: 30px;
+    border: 1px solid rgba(0, 255, 136, 0.1);
+    font-size: 0.85rem;
+}
+
+.creator-profit-tag strong {
+    color: #00ff88;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-card {
+    background: #0a0a0f;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 450px;
+}
+
+.simple-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 16px;
+    border-radius: 10px;
+    color: white;
+    font-size: 1rem;
+    outline: none;
+}
+
+.simple-input:focus {
+    border-color: var(--primary);
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.border-orange { border-left: 4px solid #ff5e00; }
+.border-blue { border-left: 4px solid #0095ff; }
+.border-yellow { border-left: 4px solid #ffcc00; }
+.border-green { border-left: 4px solid #00ff88; }

@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', 'user') == 'admin') || 
+        request.auth.token.email in ['firefire2674543015@gmail.com', 'karanak1513@gmail.com']
+      );
+    }
+
+    function isCreator() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', 'user') == 'creator';
+    }
+
+    function isSuspended() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('status', 'active') == 'suspended';
+    }
+
+    // USERS
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      // Admin can change status, role. User can only change their own basic profile.
+      allow update: if isAdmin() 
+                    || (isSignedIn() && request.auth.uid == userId 
+                        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status']));
+      allow delete: if isAdmin();
+    }
+
+    // TOURNAMENTS
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow create: if (isAdmin() || isCreator()) && !isSuspended();
+      
+      // Admin = Full Access
+      // Creator = Full Access to THEIR tournaments (if not suspended)
+      // Player = Can ONLY update 'players' count field when joining
+      allow update: if isAdmin() 
+                    || (isCreator() && resource.data.createdBy == request.auth.uid && !isSuspended())
+                    || (isSignedIn() && !isSuspended() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['players']));
+      allow delete: if isAdmin() || (isCreator() && resource.data.createdBy == request.auth.uid && !isSuspended());
+    }
+
+    // PLAYER JOIN REQUESTS
+    match /tournament_players/{joinId} {
+      allow read: if true;
+      allow create: if isSignedIn() && !isSuspended();
+      
+      // Admin = Full Access
+      // User = Can delete/update their own request
+      // Creator = Can approve/reject requests for THEIR tournaments
+      allow update, delete: if isAdmin() || 
+                             (isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.playerId == request.auth.uid)) ||
+                             (isCreator() && get(/databases/$(database)/documents/tournaments/$(resource.data.tournamentId)).data.createdBy == request.auth.uid && !isSuspended());
+    }
+    
+    // OTHER COLLECTIONS
+    match /uid_submissions/{subId} {
+      allow read: if true;
+      allow write: if isSignedIn() && !isSuspended();
+    }
+    
+    match /admin_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if true;
+      allow write: if isSignedIn() && !isSuspended();
+    }
+
+    match /entries/{entryId} {
+      allow read: if true;
+      allow write: if isSignedIn() && !isSuspended();
+    }
+
+    match /{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

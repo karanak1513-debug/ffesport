@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const CountdownTimer = ({ dateStr, timeStr }) => {
+const CountdownTimer = ({ dateStr, timeStr, status }) => {
     const parseDateTime = () => {
         try {
             let parsedDate = null;
@@ -67,10 +67,19 @@ const CountdownTimer = ({ dateStr, timeStr }) => {
         return () => clearInterval(interval);
     }, [targetTime]);
 
-    if (!targetTime || !timeLeft) {
+    const isTerminal = status === 'completed' || status === 'closed' || status === 'cancelled';
+
+    if (!targetTime || !timeLeft || isTerminal) {
+        let message = "Match Started / Ended";
+        if (status === 'live') message = "🔥 Match is LIVE NOW!";
+        if (status === 'completed') message = "🏆 Tournament Completed";
+        if (status === 'closed') message = "🔒 Registration Closed";
+        if (status === 'cancelled') message = "🚫 Match Cancelled";
+        if (status === 'open' && !timeLeft) message = "⚔️ Battle Opening...";
+
         return (
-            <div className="countdown-timer expired text-warning font-bold" style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
-                Match Started / Ended
+            <div className={`countdown-timer expired ${status === 'live' ? 'text-success' : 'text-warning'} font-bold px-4 py-2 bg-white/5 rounded-xl border border-white/10`} style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', fontSize: '0.9rem', letterSpacing: '0.5px' }}>
+                {message}
             </div>
         );
     }

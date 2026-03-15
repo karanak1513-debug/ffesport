@@ -11,6 +11,8 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
+import CreatorPanel from './pages/CreatorPanel';
+import SocialPromo from './components/SocialPromo';
 import Navbar from './components/Navbar/Navbar';
 import Footer from './components/Footer/Footer';
 import { useAuth } from './context/AuthContext';
@@ -27,17 +29,17 @@ const ProtectedRoute = ({ children }) => {
 // Protected Route for Admin only
 const AdminRoute = ({ children }) => {
   const { isAdmin, isLoading, currentUser } = useAuth();
-
   if (isLoading) return <div className="loading-screen text-center p-5">Loading Admin Access...</div>;
   if (!currentUser || !isAdmin) return <Navigate to="/login" replace />;
-
   return children;
 };
+
 
 function App() {
   return (
     <Router>
       <div className="app-container">
+        <SocialPromo />
         <Navbar />
         <main className="main-content">
           <Routes>
@@ -55,6 +57,13 @@ function App() {
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Creator Panel — any logged-in user can manage their own tournaments */}
+            <Route path="/creator" element={
+              <ProtectedRoute>
+                <CreatorPanel />
               </ProtectedRoute>
             } />
 

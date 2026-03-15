@@ -1,49 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Copy, ShieldAlert, Timer, CheckCircle, Smartphone, Lock, Trophy, Medal, Send } from 'lucide-react';
+import { Copy, ShieldAlert, Timer, CheckCircle, Smartphone, Lock, Trophy, Medal, ArrowLeft, Ghost, ExternalLink } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import './MatchRoom.css';
 
 const MatchRoom = () => {
     const { id: matchId } = useParams();
-    const { tournaments, entries, submitLateUID, liveMessages, sendRoomMessage } = useApp();
-
+    const { tournaments, tournamentPlayers } = useApp();
+    const { currentUser } = useAuth();
+    const [currentTime, setCurrentTime] = useState(Date.now());
     const [copiedId, setCopiedId] = useState(false);
     const [copiedPass, setCopiedPass] = useState(false);
-    const [currentTime, setCurrentTime] = useState(Date.now());
 
-    // UID Submission State
-    const [uidForm, setUidForm] = useState({ name: '', uid: '' });
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitted, setSubmitted] = useState(false);
-
-    // Chat State
-    const [chatMsg, setChatMsg] = useState('');
-    const roomMessages = liveMessages[matchId] ? Object.values(liveMessages[matchId]).sort((a, b) => a.time - b.time) : [];
-
-    // Find real tournament
-    const tournament = tournaments.find(t => String(t.id) === String(matchId));
+    const tournament = tournaments?.find(t => String(t?.id) === String(matchId));
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
         return () => clearInterval(timer);
     }, []);
 
-    if (!tournament) {
-        return <div className="container p-5 text-center"><h2>Match Not Found</h2></div>;
-    }
+    if (!tournament) return <div className="match-room-page"><div className="container py-20 text-center"><h2>Arena Not Found</h2></div></div>;
 
-    // Security Check
-    const isPlayerJoined = entries.some(e => String(e.tournamentId) === String(matchId));
+    const myPlayerRecord = tournamentPlayers?.find(p => 
+        String(p.tournamentId) === String(matchId) && 
+        String(p.userId) === String(currentUser?.uid)
+    );
 
-    // Release Timer Logic
-    const matchTime = new Date(`${tournament.date} ${tournament.exactTime || tournament.time}`).getTime();
-    const releaseTime = matchTime - (10 * 60 * 1000);
-    const isReleased = currentTime >= releaseTime;
-    const isStarted = currentTime >= matchTime;
+    const isApproved = myPlayerRecord?.status === 'approved';
     const isCompleted = tournament.status === 'completed';
+    const tournamentDate = tournament.date || new Date().toDateString();
+    const tournamentTime = tournament.matchTime || tournament.exactTime || "00:00";
+    
+    let matchTime = Date.now() + 3600000;
+    try {
+        matchTime = new Date(`${tournamentDate} ${tournamentTime}`).getTime();
+    } catch (e) { console.warn("Date parse error", e); }
+    
+    const releaseTime = matchTime - (10 * 60 * 1000);
+    const isReleased = currentTime >= releaseTime || (tournament.roomId && tournament.roomPassword);
+    const timeLeft = Math.max(0, Math.floor((matchTime - currentTime) / 1000));
 
-    const timeLeftToStarts = Math.max(0, Math.floor((matchTime - currentTime) / 1000));
     const formatTime = (seconds) => {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
@@ -52,266 +50,124 @@ const MatchRoom = () => {
 
     const copyToClipboard = (text, type) => {
         navigator.clipboard.writeText(text);
-        if (type === 'id') {
-            setCopiedId(true);
-            setTimeout(() => setCopiedId(false), 2000);
-        } else {
-            setCopiedPass(true);
-            setTimeout(() => setCopiedPass(false), 2000);
-        }
+        if (type === 'id') { setCopiedId(true); setTimeout(() => setCopiedId(false), 2000); }
+        else { setCopiedPass(true); setTimeout(() => setCopiedPass(false), 2000); }
     };
 
-    const handleUidSubmit = async (e) => {
-        e.preventDefault();
-        if (!uidForm.name || !uidForm.uid) return alert("Please fill all fields");
-
-        setIsSubmitting(true);
-        const success = await submitLateUID(matchId, `user_${Date.now()}`, uidForm.name, uidForm.uid);
-        setIsSubmitting(false);
-
-        if (success) {
-            setSubmitted(true);
-            setUidForm({ name: '', uid: '' });
-        } else {
-            alert("Failed to submit UID. Please try again.");
-        }
-    };
-
-    const handleChatSubmit = (e) => {
-        e.preventDefault();
-        if (!chatMsg.trim()) return;
-        
-        sendRoomMessage(matchId, {
-            sender: "Player",
-            text: chatMsg,
-            role: "player"
-        });
-        setChatMsg('');
-    };
+    if (!myPlayerRecord || !isApproved) {
+        return (
+            <div className="match-room-page">
+                <div className="container py-20 text-center">
+                    <Lock size={64} className="text-primary mb-6" />
+                    <h2>Restricted Access</h2>
+                    <p className="text-muted mt-4">Only approved players can enter the room details area.</p>
+                    <Link to="/" className="btn btn-secondary mt-8">Go Back Home</Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="match-room-page">
-            <div className="container match-room-container">
-                <div className="text-center mb-5">
-                    <div className="status-indicator">
-                        <span className={`live-dot-large ${isCompleted ? 'completed' : isStarted ? 'live' : 'waiting'}`}></span>
-                        {isCompleted ? 'Match Completed' : isStarted ? 'Match Started' : 'Waiting for Players'}
+            <div className="room-header border-b border-white/5 py-16 bg-card-glow">
+                <div className="container">
+                    <div className="flex justify-between items-center mb-4">
+                        <Link to="/" className="back-link"><ArrowLeft size={16} /> Back to Arena</Link>
+                        <span className={`badge badge-${tournament.status?.toLowerCase()}`}>{tournament.status}</span>
                     </div>
-                    <h1 className="room-title">{tournament.name} <span className="text-gradient">Room</span></h1>
-                    <p className="text-muted text-lg mt-2">{tournament.gameMode} • {tournament.map || 'Bermuda'}</p>
+                    <h1 className="tournament-title">{tournament.name}</h1>
+                    <div className="flex gap-4 mt-6">
+                        <div className="info-chip">Mode: {tournament.mode || 'Squad'}</div>
+                        <div className="info-chip">Map: {tournament.map || 'Bermuda'}</div>
+                    </div>
                 </div>
+            </div>
 
-                {!isPlayerJoined ? (
-                    <div className="glass-panel text-center p-5 mb-5">
-                        <Lock size={48} className="text-danger mb-3 mx-auto" />
-                        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
-                        <p className="text-muted mb-4">You must join this tournament to see the Room ID and Password.</p>
-                        <Link to={`/tournament/${matchId}`} className="btn btn-primary">Join Tournament</Link>
-                    </div>
-                ) : isCompleted ? (
-                    <div className="winners-announcement glass-panel p-5 text-center fade-in">
-                        <Trophy size={64} className="text-warning mx-auto mb-4" />
-                        <h2 className="text-3xl font-bold mb-2">Official Results Out!</h2>
-                        <p className="text-muted mb-5">Congratulations to all the warriors who participated.</p>
-
-                        <div className="winners-podium d-flex justify-center gap-4 flex-wrap">
-                            <div className="podium-card gold glass-panel p-4">
-                                <Medal size={40} className="text-warning mb-2 mx-auto" />
-                                <h4 className="rank">1st Place</h4>
-                                <h3 className="winner-name text-gradient">{tournament.winners?.first || "TBD"}</h3>
+            <div className="container py-12">
+                {isCompleted ? (
+                    <div className="completed-view text-center py-20 glass-panel">
+                        <Trophy size={80} className="text-primary mb-6 mx-auto" />
+                        <h2 className="text-3xl font-black">Match Completed</h2>
+                        <p className="text-muted mt-4">The battle has ended. Check the results below.</p>
+                        
+                        <div className="winners-row mt-12">
+                            <div className="winner-cell gold">
+                                <Crown size={32} />
+                                <h3>{tournament.winners?.first || 'N/A'}</h3>
+                                <span>Champion</span>
                             </div>
-                            {tournament.winners?.second && (
-                                <div className="podium-card silver glass-panel p-4">
-                                    <Medal size={40} className="text-muted mb-2 mx-auto" />
-                                    <h4 className="rank">2nd Place</h4>
-                                    <h3 className="winner-name">{tournament.winners.second}</h3>
-                                </div>
-                            )}
-                            {tournament.winners?.third && (
-                                <div className="podium-card bronze glass-panel p-4">
-                                    <Medal size={40} className="text-secondary mb-2 mx-auto" />
-                                    <h4 className="rank">3rd Place</h4>
-                                    <h3 className="winner-name">{tournament.winners.third}</h3>
-                                </div>
-                            )}
                         </div>
-                        <div className="mt-5">
-                            <Link to="/" className="btn btn-primary">Back to Home</Link>
-                        </div>
+                        <Link to="/leaderboard" className="btn btn-primary mt-12">View Leaderboard</Link>
                     </div>
                 ) : (
                     <div className="room-grid">
-                        <div className="glass-panel room-card credentials-card">
-                            <div className="card-header text-center border-bottom pb-4 mb-4">
-                                <Timer size={40} className="text-primary mx-auto mb-3" />
-                                <h3 className="countdown-text glow-text">
-                                    {isStarted ? "00:00" : formatTime(timeLeftToStarts)}
-                                </h3>
-                                <p className="text-muted">
-                                    {isStarted ? "Match has started!" : "Time until match start"}
-                                </p>
-                            </div>
-
-                            {!isReleased ? (
-                                <div className="credentials-box text-center p-4">
-                                    <Lock size={32} className="text-warning mb-3 mx-auto" />
-                                    <h4 className="text-warning mb-2">Locked</h4>
-                                    <p className="text-sm text-muted">Room details will be available 10 minutes before match.</p>
+                        <div className="room-main">
+                            <div className="intel-box card p-8">
+                                <div className="flex justify-between items-center mb-8">
+                                    <h3>Room Credentials</h3>
+                                    {isReleased ? (
+                                        <span className="text-success flex items-center gap-2">
+                                            <CheckCircle size={16} /> Credentials Released
+                                        </span>
+                                    ) : (
+                                        <span className="text-warning flex items-center gap-2">
+                                            <Timer size={16} /> Releasing in {formatTime(Math.max(0, Math.floor((releaseTime - currentTime) / 1000)))}
+                                        </span>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="credentials-box">
-                                    <h4 className="text-success mb-4 text-center">
-                                        {isStarted ? "Match Started – Join Room Now" : "Room Details Revealed!"}
-                                    </h4>
 
-                                    <div className="cred-row">
-                                        <div className="cred-info">
-                                            <span className="cred-label">Custom Room ID</span>
-                                            <span className="cred-value text-gradient font-mono">
-                                                {tournament.roomId || 'PENDING'}
-                                            </span>
-                                        </div>
-                                        {tournament.roomId && (
-                                            <button className="btn btn-outline btn-sm copy-btn" onClick={() => copyToClipboard(tournament.roomId, 'id')}>
-                                                {copiedId ? <CheckCircle size={16} className="text-success" /> : <Copy size={16} />}
-                                                {copiedId ? 'Copied' : 'Copy'}
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <div className="cred-row mt-3">
-                                        <div className="cred-info">
-                                            <span className="cred-label">Room Password</span>
-                                            <span className="cred-value text-gradient font-mono">
-                                                {tournament.roomPassword || 'PENDING'}
-                                            </span>
-                                        </div>
-                                        {tournament.roomPassword && (
-                                            <button className="btn btn-outline btn-sm copy-btn" onClick={() => copyToClipboard(tournament.roomPassword, 'pass')}>
-                                                {copiedPass ? <CheckCircle size={16} className="text-success" /> : <Copy size={16} />}
-                                                {copiedPass ? 'Copied' : 'Copy'}
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <a href="intent://freefire.mobile#Intent;scheme=android-app;package=com.dts.freefireth;end;" className="btn btn-primary w-100 btn-lg mt-4 d-flex justify-center flex-col align-center">
-                                        <span className="d-flex align-center"><Smartphone size={20} className="mr-2" /> Open Free Fire</span>
-                                    </a>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* LIVE CHAT & UPDATES PANEL */}
-                        <div className="glass-panel room-card chat-card fade-in">
-                            <h3 className="card-title mb-4 flex align-center text-primary">
-                                <Medal size={24} className="mr-2" /> Live Match Feed
-                            </h3>
-                            <div className="chat-messages" style={{ height: '300px', overflowY: 'auto', marginBottom: '15px', paddingRight: '10px' }}>
-                                {roomMessages.length === 0 ? (
-                                    <p className="text-muted text-center py-5">No messages yet. Start the conversation!</p>
-                                ) : (
-                                    roomMessages.map((msg, idx) => (
-                                        <div key={idx} className={`chat-bubble mb-3 ${msg.role === 'admin' ? 'admin' : ''}`}>
-                                            <div className="d-flex justify-between align-center mb-1">
-                                                <span className="chat-sender text-xs font-bold">{msg.role === 'admin' ? '🛡️ Admin' : msg.sender}</span>
-                                                <span className="text-xxs text-muted">{new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                {isReleased ? (
+                                    <div className="credentials-list">
+                                        <div className="cred-item">
+                                            <div className="cred-info">
+                                                <label>Room ID</label>
+                                                <div className="cred-value">{tournament.roomId || 'Wait...'}</div>
                                             </div>
-                                            <p className="chat-text m-0 p-2 rounded bg-dark-soft text-sm">{msg.text}</p>
+                                            <button className="copy-btn" onClick={() => copyToClipboard(tournament.roomId, 'id')}>
+                                                {copiedId ? 'Copied!' : <Copy size={18} />}
+                                            </button>
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                            <form onSubmit={handleChatSubmit} className="d-flex gap-2">
-                                <input
-                                    type="text"
-                                    className="flex-grow-1 bg-dark-soft border-secondary p-2 rounded text-white"
-                                    placeholder="Type a message..."
-                                    value={chatMsg}
-                                    onChange={(e) => setChatMsg(e.target.value)}
-                                />
-                                <button type="submit" className="btn btn-primary btn-sm"><Send size={16} /></button>
-                            </form>
-                        </div>
-
-                        {/* UID SUBMISSION PANEL */}
-                        {isReleased && !isCompleted && (
-                            <div className="glass-panel room-card uid-submission-card fade-in">
-                                <h3 className="card-title mb-4 flex align-center text-primary">
-                                    <Send size={24} className="mr-2" /> Final UID Submission
-                                </h3>
-
-                                {submitted ? (
-                                    <div className="text-center py-5">
-                                        <CheckCircle size={48} className="text-success mx-auto mb-3" />
-                                        <h4 className="text-success">UID Submitted Successfully!</h4>
-                                        <p className="text-muted text-sm mt-2">The admin will verify your entry shortly.</p>
+                                        <div className="cred-item">
+                                            <div className="cred-info">
+                                                <label>Password</label>
+                                                <div className="cred-value">{tournament.roomPassword || 'Wait...'}</div>
+                                            </div>
+                                            <button className="copy-btn" onClick={() => copyToClipboard(tournament.roomPassword, 'pass')}>
+                                                {copiedPass ? 'Copied!' : <Copy size={18} />}
+                                            </button>
+                                        </div>
+                                        <a href="intent://freefire.mobile#Intent;scheme=android-app;package=com.dts.freefireth;end;" className="btn btn-primary w-100 py-4 mt-8 flex items-center justify-center gap-2">
+                                            <Smartphone size={20} /> Open Free Fire
+                                        </a>
                                     </div>
                                 ) : (
-                                    <form onSubmit={handleUidSubmit}>
-                                        <p className="text-sm text-muted mb-4">Please submit your Free Fire UID again for final verification.</p>
-                                        <div className="form-group mb-3">
-                                            <label className="text-xs text-muted mb-1 d-block uppercase">Registered Name</label>
-                                            <input
-                                                type="text"
-                                                className="w-100 bg-dark-soft border-secondary p-2 rounded text-white"
-                                                placeholder="Enter your name"
-                                                required
-                                                value={uidForm.name}
-                                                onChange={(e) => setUidForm({ ...uidForm, name: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="form-group mb-4">
-                                            <label className="text-xs text-muted mb-1 d-block uppercase">Free Fire UID</label>
-                                            <input
-                                                type="text"
-                                                className="w-100 bg-dark-soft border-secondary p-2 rounded text-white"
-                                                placeholder="Enter FF UID"
-                                                required
-                                                value={uidForm.uid}
-                                                onChange={(e) => setUidForm({ ...uidForm, uid: e.target.value })}
-                                            />
-                                        </div>
-                                        <button
-                                            type="submit"
-                                            className="btn btn-primary w-100"
-                                            disabled={isSubmitting}
-                                        >
-                                            {isSubmitting ? 'Submitting...' : 'Submit UID Now'}
-                                        </button>
-                                    </form>
+                                    <div className="locked-view py-12 text-center">
+                                        <Lock size={48} className="text-muted mb-4 mx-auto" />
+                                        <p className="text-muted">Intel will be revealed 10 minutes before match start.</p>
+                                    </div>
                                 )}
                             </div>
-                        )}
+                        </div>
 
-                        {!isReleased && (
-                            <div className="glass-panel room-card instructions-card">
-                                <h3 className="card-title mb-4 flex align-center"><ShieldAlert size={24} className="mr-2 text-warning" /> Instructions</h3>
-                                <div className="instruction-step">
-                                    <div className="step-number">1</div>
-                                    <div className="step-details">
-                                        <h4>Copy Room ID</h4>
-                                        <p className="text-muted text-sm">Copy the ID and paste it in Free Fire Custom Game search.</p>
-                                    </div>
-                                </div>
-                                <div className="instruction-step">
-                                    <div className="step-number">2</div>
-                                    <div className="step-details">
-                                        <h4>Enter Password</h4>
-                                        <p className="text-muted text-sm">Enter the password exactly as shown to enter the room.</p>
-                                    </div>
-                                </div>
-                                <div className="instruction-step">
-                                    <div className="step-number">3</div>
-                                    <div className="step-details">
-                                        <h4>Ready Up</h4>
-                                        <p className="text-muted text-sm">Join your assigned slot and wait for the host to start.</p>
-                                    </div>
-                                </div>
-                                <div className="warning-box mt-4">
-                                    <strong>WARNING:</strong> sharing room details with unregistered players will result in a permanent ban.
-                                </div>
+                        <div className="room-sidebar">
+                            <div className="protocol-box card p-6">
+                                <h4 className="flex items-center gap-2 mb-4"><ShieldAlert size={18} className="text-primary" /> Protocols</h4>
+                                <ul className="protocol-list">
+                                    <li>Don't share Room ID/Pass. sharing = Permanent Ban.</li>
+                                    <li>Join within 5 minutes of release.</li>
+                                    <li>Keep your assigned slot.</li>
+                                    <li>Teaming up is not allowed.</li>
+                                </ul>
                             </div>
-                        )}
+                            
+                            <div className="support-box card mt-6 p-6">
+                                <h4>Need Support?</h4>
+                                <p className="text-xs text-muted mt-2">If you face any issues, contact admin via Instagram.</p>
+                                <a href="https://www.instagram.com/its_sun_official_ok/" className="btn btn-secondary w-100 mt-4 flex items-center justify-center gap-2" target="_blank">
+                                    <ExternalLink size={16} /> Admin Instagram
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

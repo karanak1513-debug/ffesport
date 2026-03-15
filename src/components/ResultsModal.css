@@ -1,0 +1,206 @@
+/* ══ Results Modal ══════════════════════════════════════════ */
+.results-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.results-modal {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    background: linear-gradient(160deg, #0f1117 0%, #13161f 60%, #0d1020 100%);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 24px;
+    padding: 36px 28px 28px;
+    box-shadow: 0 0 80px rgba(255, 215, 0, 0.12), 0 40px 80px rgba(0,0,0,0.6);
+    overflow: hidden;
+}
+
+/* close X */
+.results-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #94a3b8;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 10;
+}
+.results-close:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+/* header */
+.results-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.results-trophy-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,215,0,0.22) 0%, rgba(255,215,0,0.04) 70%);
+    border: 1px solid rgba(255,215,0,0.3);
+    color: #FFD700;
+    margin-bottom: 14px;
+    box-shadow: 0 0 30px rgba(255,215,0,0.25);
+}
+
+.results-title {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: #fff;
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+}
+.results-title span { color: #FFD700; }
+
+.results-tourney-name {
+    font-size: 14px;
+    color: #94a3b8;
+    margin: 0 0 10px 0;
+    font-weight: 600;
+}
+
+.results-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.results-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.results-meta strong { color: #22c55e; }
+
+/* confetti */
+.results-confetti {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+.confetti-dot {
+    position: absolute;
+    top: 0;
+    border-radius: 50%;
+    opacity: 0;
+}
+
+/* ── Podium ─────────────────────────── */
+.results-podium {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 12px;
+    margin: 0 0 24px 0;
+    min-height: 220px;
+}
+
+.podium-slot {
+    flex: 1;
+    max-width: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.podium-slot.empty { opacity: 0; pointer-events: none; }
+
+.podium-medal {
+    font-size: 36px;
+    line-height: 1;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+}
+
+.podium-name {
+    font-size: 15px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.2;
+    letter-spacing: 0.3px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    word-break: break-word;
+}
+
+.podium-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.podium-block {
+    width: 100%;
+    border-radius: 10px 10px 0 0;
+    transition: all 0.3s;
+}
+
+/* first place is center + tallest */
+.podium-slot.first {
+    order: 0;
+    z-index: 2;
+}
+.podium-slot.second { order: -1; }
+.podium-slot.third  { order: 1; }
+
+/* no winners */
+.results-no-winners {
+    text-align: center;
+    color: #64748b;
+    padding: 20px 0;
+    font-size: 14px;
+}
+
+/* close button */
+.results-close-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+}
+.results-close-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+}

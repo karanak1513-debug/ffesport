@@ -1,137 +1,150 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Filter, Plus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, Trophy } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import CreateTournamentModal from '../components/CreateTournamentModal';
-import CountdownTimer from '../components/CountdownTimer';
+import JoinBattleModal from '../components/JoinBattleModal';
+import MatchRoomModal from '../components/MatchRoomModal';
+import TournamentCard from '../components/TournamentCard';
+import ResultsModal from '../components/ResultsModal';
 import './Tournaments.css';
 
 const Tournaments = () => {
     const [activeTab, setActiveTab] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
-
+    const [selectedTournament, setSelectedTournament] = useState(null);
+    const [matchRoomTournament, setMatchRoomTournament] = useState(null);
+    const [resultsTournament, setResultsTournament] = useState(null);
+    
     const { tournaments } = useApp();
+    const { isAdmin, isCreator, userData } = useAuth();
+    const isSuspended = userData?.status?.toLowerCase() === 'suspended';
+    const navigate = useNavigate();
 
-    const filteredTournaments = activeTab === 'all'
-        ? tournaments
-        : tournaments.filter(t => t.status === activeTab);
+    const filteredTournaments = useMemo(() => {
+        let list = [...tournaments];
+        
+        // Filter by Tab
+        if (activeTab === 'upcoming') {
+            list = list.filter(t => t.status === 'open' || t.status === 'upcoming');
+        } else if (activeTab !== 'all') {
+            list = list.filter(t => t.status?.toLowerCase() === activeTab);
+        }
+
+        // Filter by Search
+        if (searchQuery) {
+            list = list.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        }
+
+        return list;
+    }, [tournaments, activeTab, searchQuery]);
 
     return (
         <div className="tournaments-page">
-            <div className="page-header">
-                <div className="container">
-                    <h1 className="page-title">Battle <span className="text-gradient">Tournaments</span></h1>
-                    <p className="page-subtitle">Join the most competitive Free Fire tournaments and win huge daily cash prizes.</p>
+            <div className="tournament-hero">
+                <div className="container relative z-10 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                    >
+                        <h1 className="text-4xl lg:text-6xl font-black mb-4">TOURNAMENTS</h1>
+                        <p className="text-muted max-w-xl mx-auto mb-8 font-medium">
+                            Join competitive Free Fire matches and win rewards.
+                        </p>
+                    </motion.div>
                 </div>
             </div>
 
-            <div className="container content-section">
-                <div className="filters-bar glass-panel">
-                    <div className="tabs">
-                        <button
-                            className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('all')}
-                        >
-                            All Matches
-                        </button>
-                        <button
-                            className={`tab-btn ${activeTab === 'live' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('live')}
-                        >
-                            Live Now
-                        </button>
-                        <button
-                            className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('upcoming')}
-                        >
-                            Upcoming
-                        </button>
-                        <button
-                            className={`tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('completed')}
-                        >
-                            Completed
-                        </button>
+            <div className="container pb-20">
+                {/* Modern Filter & Search Bar */}
+                <div className="controls-bar p-4 mb-12 flex flex-col lg:flex-row gap-6 items-center justify-between">
+                    <div className="tab-filters flex gap-1 overflow-x-auto w-full lg:w-auto">
+                        {['all', 'live', 'upcoming', 'completed'].map(tab => (
+                            <button
+                                key={tab}
+                                className={`filter-tab-btn ${activeTab === tab ? 'active' : ''}`}
+                                onClick={() => setActiveTab(tab)}
+                            >
+                                {tab.toUpperCase()}
+                            </button>
+                        ))}
                     </div>
 
-                    <div className="search-filter">
-                        <div className="search-box">
+                    <div className="flex gap-4 w-full lg:w-auto">
+                        <div className="modern-search flex-1 lg:w-80">
                             <Search size={18} className="search-icon" />
-                            <input type="text" placeholder="Search tournaments..." />
+                            <input 
+                                type="text" 
+                                placeholder="Search tournament..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
                         </div>
-                        <button className="btn btn-outline btn-icon" style={{ marginRight: '10px' }}>
-                            <Filter size={18} />
-                        </button>
-                        {/* Assuming this page is public, let's just make it available if we want admins to use it here. */}
-                        <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-                            <Plus size={18} /> Create Tournament
-                        </button>
+                        {(isAdmin || (isCreator && !isSuspended)) && (
+                            <button className="btn-pro primary px-8" onClick={() => setShowCreateModal(true)}>
+                                <Plus size={20} /> HOST
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                <div className="tournaments-grid">
-                    {filteredTournaments.length === 0 ? (
-                        <div className="text-center p-5 glass-panel w-100" style={{ gridColumn: '1 / -1' }}>
-                            <h3 className="text-muted">No tournaments available. Check back later.</h3>
-                        </div>
-                    ) : (
-                        filteredTournaments.map(t => (
-                            <div key={t.id} className="tournament-card glass-panel">
-                                <div className="card-header">
-                                    <span className={`status-badge ${t.status}`}>
-                                        {t.status === 'live' && <span className="live-dot"></span>}
-                                        {t.status === 'live' ? 'Live Now' : t.status === 'upcoming' ? 'Upcoming' : 'Completed'}
-                                    </span>
-                                    <span className="mode-badge">{t.mode}</span>
+                {/* Tournament List Grid */}
+                <div className="tournaments-grid-modern">
+                    <AnimatePresence mode="popLayout">
+                        {filteredTournaments.length > 0 ? (
+                            filteredTournaments.map((t) => (
+                                <TournamentCard 
+                                    key={t.id} 
+                                    t={t} 
+                                    onJoin={() => setSelectedTournament(t)}
+                                    onDetails={() => navigate(`/tournament/${t.id}`)}
+                                    onMatchRoom={() => setMatchRoomTournament(t)}
+                                    onResults={() => setResultsTournament(t)}
+                                />
+                            ))
+                        ) : (
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="empty-state-modern col-span-full py-40 text-center"
+                            >
+                                <div className="empty-icon-box mx-auto mb-8 bg-white/5 border border-white/10">
+                                    <Trophy size={48} className="text-muted opacity-30" />
                                 </div>
-                                <div className="card-body">
-                                    <h3 className="tournament-name">{t.name}</h3>
-                                    <div className="tournament-schedule text-sm text-muted mb-3 mt-2">
-                                        <p>📅 {t.date} | ⏰ {t.exactTime || t.time}</p>
-                                    </div>
-                                    <div className="mb-3 mt-2">
-                                        {(t.status === 'live' || t.status === 'upcoming') && (
-                                            <CountdownTimer dateStr={t.date} timeStr={t.exactTime || t.time} />
-                                        )}
-                                    </div>
-                                    <div className="tournament-meta">
-                                        <div className="meta-item">
-                                            <span className="meta-label">Prize Pool</span>
-                                            <span className="meta-value text-gradient">{t.prize}</span>
-                                        </div>
-                                        <div className="meta-item">
-                                            <span className="meta-label">Entry Fee</span>
-                                            <span className="meta-value">{t.entry}</span>
-                                        </div>
-                                    </div>
-                                    <div className="progress-container">
-                                        <div className="progress-labels">
-                                            <span>Players Joined</span>
-                                            <span>{t.players} / {t.maxPlayers}</span>
-                                        </div>
-                                        <div className="progress-bar">
-                                            <div className="progress-fill" style={{ width: `${(t.players / t.maxPlayers) * 100}%` }}></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="card-footer">
-                                    {t.status === 'completed' ? (
-                                        <Link to={`/tournament/${t.id}/results`} className="btn btn-outline w-100">
-                                            View Results
-                                        </Link>
-                                    ) : (
-                                        <Link to={`/tournament/${t.id}`} className="btn btn-primary w-100">
-                                            Join Match
-                                        </Link>
-                                    )}
-                                </div>
-                            </div>
-                        ))
-                    )}
+                                <h3 className="text-3xl font-black mb-3">No Tournaments Found</h3>
+                                <p className="text-muted text-lg">We couldn't find any matches matching your criteria.</p>
+                                <button className="btn btn-secondary mt-8" onClick={() => {setActiveTab('all'); setSearchQuery('');}}>Reset Filters</button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
 
-            {showCreateModal && <CreateTournamentModal onClose={() => setShowCreateModal(false)} />}
+            {/* Global Modals */}
+            <AnimatePresence>
+                {showCreateModal && <CreateTournamentModal onClose={() => setShowCreateModal(false)} />}
+                {selectedTournament && (
+                    <JoinBattleModal 
+                        tournament={selectedTournament} 
+                        onClose={() => setSelectedTournament(null)} 
+                    />
+                )}
+                {matchRoomTournament && (
+                    <MatchRoomModal 
+                        tournament={matchRoomTournament} 
+                        onClose={() => setMatchRoomTournament(null)} 
+                    />
+                )}
+                {resultsTournament && (
+                    <ResultsModal
+                        tournament={resultsTournament}
+                        onClose={() => setResultsTournament(null)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

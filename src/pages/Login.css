@@ -7,22 +7,46 @@
 .login-card {
     max-width: 450px;
     width: 100%;
-    padding: 3rem 2rem;
-    border-top: 3px solid var(--color-primary);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    animation: slideUp 0.5s ease-out;
+    padding: 3.5rem 2.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: rgba(10, 10, 18, 0.85) !important;
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 28px !important;
+    box-shadow: 
+        0 20px 50px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    animation: slideUp 0.7s cubic-bezier(0.19, 1, 0.22, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
 }
 
 .auth-icon-wrapper {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: rgba(var(--color-primary-rgb), 0.1);
-    border: 1px solid rgba(var(--color-primary-rgb), 0.3);
-    box-shadow: 0 0 20px rgba(var(--color-primary-rgb), 0.2);
+    width: 70px;
+    height: 70px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255, 69, 0, 0.1), rgba(138, 43, 226, 0.1));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    transform: rotate(-5deg);
+    transition: all 0.3s ease;
+}
+
+.login-card:hover .auth-icon-wrapper {
+    transform: rotate(0deg) scale(1.05);
 }
 
 .error-alert {
@@ -42,33 +66,168 @@
     align-items: center;
 }
 
+.glass-input {
+    background: rgba(0, 0, 0, 0.3) !important;
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 16px !important;
+    color: #ffffff !important;
+    height: 58px !important;
+    font-size: 1rem !important;
+    padding: 0 1.5rem 0 3.5rem !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Fix browser autofill background */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #0a0a12 inset !important;
+    -webkit-text-fill-color: white !important;
+    caret-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.glass-input:focus {
+    background: rgba(0, 0, 0, 0.45) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 4px rgba(255, 69, 0, 0.15) !important;
+    outline: none;
+}
+
+.glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.form-group label {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.6rem !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
 .input-icon {
     position: absolute;
-    left: 1rem;
-    color: #9ca3af;
+    left: 1.25rem;
+    color: var(--primary);
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.8;
 }
 
 .form-control.with-icon {
-    padding-left: 2.8rem;
-    padding-right: 2.8rem;
+    padding-left: 3.5rem !important;
 }
 
 .toggle-password-btn {
     position: absolute;
-    right: 1rem;
-    background: none;
-    border: none;
-    color: #9ca3af;
+    right: 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    width: 34px;
+    height: 34px;
+    color: var(--text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    transition: color 0.3s;
+    transition: all 0.3s;
+    z-index: 5;
 }
 
 .toggle-password-btn:hover {
-    color: var(--color-text);
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin: 1.5rem 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.divider:not(:empty)::before {
+    margin-right: 1rem;
+}
+
+.divider:not(:empty)::after {
+    margin-left: 1rem;
+}
+
+.divider span {
+    background: #0f0f19;
+    padding: 0 1rem;
+    position: relative;
+    z-index: 1;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.forgot-link {
+    color: var(--primary);
+    font-weight: 500;
+    transition: all 0.3s;
+    opacity: 0.8;
+}
+
+.forgot-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.glass-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    border-radius: 14px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.3px;
+    padding: 14px;
+    height: 54px;
+    font-size: 0.95rem;
+    transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.glass-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    color: white;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary {
+    height: 54px;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-glow {
+    position: relative;
+    box-shadow: 0 0 20px rgba(255, 69, 0, 0.3);
+}
+
+.btn-glow:hover {
+    box-shadow: 0 0 30px rgba(255, 69, 0, 0.5);
 }
 
 @keyframes slideUp {

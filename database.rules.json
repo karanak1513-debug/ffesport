@@ -1,0 +1,22 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "match_details": {
+      ".read": true,
+      "$tournamentId": {
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['roomId', 'roomPassword'])"
+      }
+    },
+    "chats": {
+      "$tournamentId": {
+        ".read": true,
+        "$messageId": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['text', 'time'])"
+        }
+      }
+    }
+  }
+}

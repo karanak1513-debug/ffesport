@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
 const Dashboard = () => {
-    const { currentUser, userData, logout, isAdmin, updateUserData } = useAuth();
+    const { userData, logout, isAdmin, updateUserData } = useAuth();
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = React.useState(false);
     const [editData, setEditData] = React.useState({});
@@ -43,7 +43,12 @@ const Dashboard = () => {
         }
     };
 
-    if (!userData) return <div className="loading-screen text-center p-5">Loading Profile...</div>;
+    if (!userData) return (
+        <div className="flex flex-col items-center justify-center min-vh-100 p-5" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="loading-screen text-center mb-4 text-2xl font-bold text-gradient">Loading Profile...</div>
+            <p className="text-muted text-sm anim-pulse">Synchronizing with FireBattle servers...</p>
+        </div>
+    );
 
     return (
         <div className="dashboard-page fade-in container mx-auto px-4 py-8">
@@ -182,40 +187,40 @@ const Dashboard = () => {
                         <h3 className="text-2xl font-bold mb-6 text-gradient">Update Profile</h3>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
-                                <label className="text-sm text-muted block mb-1">Full Name</label>
+                                <label className="text-sm font-semibold text-muted block mb-2 px-1">Full Name</label>
                                 <input 
                                     type="text" 
-                                    className="w-full bg-white/5 border border-white/10 p-2 rounded text-white"
+                                    className="dash-input w-full"
                                     value={editData.realName}
                                     onChange={(e) => setEditData({...editData, realName: e.target.value})}
                                     placeholder="Enter your real name"
                                 />
                             </div>
                             <div>
-                                <label className="text-sm text-muted block mb-1">In-Game Name</label>
+                                <label className="text-sm font-semibold text-muted block mb-2 px-1">In-Game Name</label>
                                 <input 
                                     type="text" 
-                                    className="w-full bg-white/5 border border-white/10 p-2 rounded text-white"
+                                    className="dash-input w-full"
                                     value={editData.gameName}
                                     onChange={(e) => setEditData({...editData, gameName: e.target.value})}
                                     placeholder="Enter your FF nickname"
                                 />
                             </div>
                             <div>
-                                <label className="text-sm text-muted block mb-1">Free Fire UID</label>
+                                <label className="text-sm font-semibold text-muted block mb-2 px-1">Free Fire UID</label>
                                 <input 
                                     type="text" 
-                                    className="w-full bg-white/5 border border-white/10 p-2 rounded text-white"
+                                    className="dash-input w-full font-mono"
                                     value={editData.freeFireUID}
                                     onChange={(e) => setEditData({...editData, freeFireUID: e.target.value})}
                                     placeholder="Enter your 8-10 digit UID"
                                 />
                             </div>
                             <div>
-                                <label className="text-sm text-muted block mb-1">Phone Number</label>
+                                <label className="text-sm font-semibold text-muted block mb-2 px-1">Phone Number</label>
                                 <input 
                                     type="text" 
-                                    className="w-full bg-white/5 border border-white/10 p-2 rounded text-white"
+                                    className="dash-input w-full"
                                     value={editData.phone}
                                     onChange={(e) => setEditData({...editData, phone: e.target.value})}
                                     placeholder="For prize distribution"

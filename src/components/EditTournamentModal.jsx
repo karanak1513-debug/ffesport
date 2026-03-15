@@ -1,43 +1,41 @@
 import React, { useState } from 'react';
-import { X, Trophy, Calendar, Clock, Coins, Wallet, Users, BookOpen, CreditCard, Upload, CheckCircle, ChevronRight, ChevronLeft, Zap, XCircle, Shield } from 'lucide-react';
+import { X, Trophy, Calendar, Clock, Coins, Wallet, Users, CreditCard, Upload, CheckCircle, ChevronRight, ChevronLeft, Zap, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
-import './CreateTournamentModal.css';
-
+import './CreateTournamentModal.css'; // reuse same styles
 
 const steps = [
-    { id: 1, label: 'Basics', icon: <Trophy size={16} /> },
-    { id: 2, label: 'Prizes', icon: <Coins size={16} /> },
+    { id: 1, label: 'Basics',   icon: <Trophy size={16} /> },
+    { id: 2, label: 'Prizes',   icon: <Coins size={16} /> },
     { id: 3, label: 'Schedule', icon: <Calendar size={16} /> },
-    { id: 4, label: 'Payment', icon: <CreditCard size={16} /> },
+    { id: 4, label: 'Payment',  icon: <CreditCard size={16} /> },
 ];
 
-const CreateTournamentModal = ({ onClose }) => {
-    const { createTournament } = useApp();
-    const { currentUser, isSuspended, isAdmin, isCreator } = useAuth();
-    const [step, setStep] = useState(1);
+const EditTournamentModal = ({ tournament, onClose }) => {
+    const { updateTournament } = useApp();
+    const [step, setStep]               = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [done, setDone] = useState(false);
+    const [done, setDone]               = useState(false);
 
+    // Pre-fill with existing tournament data
     const [formData, setFormData] = useState({
-        name: '',
-        game: 'Free Fire',
-        mode: 'Squad',
-        entry: '₹50',
-        prize: '₹5000',
-        prize1: '₹2500',
-        prize2: '₹1000',
-        prize3: '₹500',
-        prizeKill: '₹10',
-        maxPlayers: 48,
-        date: new Date().toISOString().split('T')[0],
-        exactTime: '20:00',
-        regCloseTime: '19:30',
-        rules: 'Standard Free Fire esports rules apply. No hacking.',
-        paymentMethod: 'UPI',
-        paymentId: 'firebattle@upi',
-        qrCodeImage: null
+        name:          tournament.name || '',
+        game:          tournament.game || 'Free Fire',
+        mode:          tournament.mode || 'Squad',
+        entry:         tournament.entry || tournament.entryFee || '₹50',
+        prize:         tournament.prize || tournament.prizePool || '₹5000',
+        prize1:        tournament.prize1 || (tournament.prizes?.[0]?.amount) || '₹2500',
+        prize2:        tournament.prize2 || (tournament.prizes?.[1]?.amount) || '₹1000',
+        prize3:        tournament.prize3 || (tournament.prizes?.[2]?.amount) || '₹500',
+        prizeKill:     tournament.prizeKill || (tournament.prizes?.find(p => p.rank === 'Per Kill')?.amount) || '₹10',
+        maxPlayers:    tournament.maxPlayers || 48,
+        date:          tournament.date || new Date().toISOString().split('T')[0],
+        exactTime:     tournament.exactTime || tournament.time || tournament.matchTime || '20:00',
+        regCloseTime:  tournament.regCloseTime || '19:30',
+        rules:         tournament.rules || 'Standard Free Fire esports rules apply.',
+        paymentMethod: tournament.paymentMethod || 'UPI',
+        paymentId:     tournament.paymentId || 'firebattle@upi',
+        qrCodeImage:   tournament.qrCodeImage || null,
     });
 
     const handleChange = (e) => {
@@ -57,22 +55,23 @@ const CreateTournamentModal = ({ onClose }) => {
         setIsSubmitting(true);
         try {
             const customPrizes = [
-                { rank: "1st Prize", amount: formData.prize1 },
-                { rank: "2nd Prize", amount: formData.prize2 },
-                { rank: "3rd Prize", amount: formData.prize3 },
-                ...(formData.prizeKill ? [{ rank: "Per Kill", amount: formData.prizeKill }] : [])
+                { rank: '1st Prize', amount: formData.prize1 },
+                { rank: '2nd Prize', amount: formData.prize2 },
+                { rank: '3rd Prize', amount: formData.prize3 },
+                ...(formData.prizeKill ? [{ rank: 'Per Kill', amount: formData.prizeKill }] : [])
             ];
-            await createTournament({
+            const res = await updateTournament(tournament.id, {
                 ...formData,
-                entryFee: formData.entry, // mapping entry to entryFee
-                matchTime: formData.exactTime, // mapping exactTime to matchTime
-                prizes: customPrizes,
-                creatorId: currentUser?.uid || 'unknown',
-                createdBy: currentUser?.uid || 'unknown', // keep for existing data
-                creatorName: currentUser?.displayName || currentUser?.email || 'Unknown'
+                entryFee:  formData.entry,
+                matchTime: formData.exactTime,
+                prizes:    customPrizes,
             });
+            if (res?.success === false) {
+                alert('❌ ' + (res.error || 'Failed to update tournament.'));
+                return;
+            }
             setDone(true);
-            setTimeout(() => onClose(), 2000);
+            setTimeout(() => onClose(), 1800);
         } catch (error) {
             alert(`❌ Error: ${error.message}`);
         } finally {
@@ -80,8 +79,8 @@ const CreateTournamentModal = ({ onClose }) => {
         }
     };
 
-    const inputClass = "modal-input";
-    const labelClass = "modal-label";
+    const inputClass = 'modal-input';
+    const labelClass = 'modal-label';
 
     return (
         <div className="ct-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -95,10 +94,14 @@ const CreateTournamentModal = ({ onClose }) => {
                 {/* Header */}
                 <div className="ct-header">
                     <div className="ct-header-left">
-                        <div className="ct-header-icon"><Zap size={22} /></div>
+                        <div className="ct-header-icon" style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8' }}>
+                            <Edit3 size={22} />
+                        </div>
                         <div>
-                            <h2>Create Tournament</h2>
-                            <p>Set up your next battle arena</p>
+                            <h2>Edit Tournament</h2>
+                            <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>
+                                {tournament.name}
+                            </p>
                         </div>
                     </div>
                     <button className="ct-close" onClick={onClose}><X size={20} /></button>
@@ -124,60 +127,7 @@ const CreateTournamentModal = ({ onClose }) => {
                 {/* Body */}
                 <div className="ct-body">
                     <AnimatePresence mode="wait">
-                        {isSuspended ? (
-                            <motion.div
-                                key="suspended"
-                                className="ct-suspended-notice flex flex-col items-center justify-center p-8 text-center"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                            >
-                                <div className="mb-6 bg-danger/10 p-5 rounded-full">
-                                    <XCircle size={64} className="text-danger" />
-                                </div>
-                                <h3 className="text-2xl font-black mb-3 text-white">ACCESS RESTRICTED</h3>
-                                <p className="text-gray-400 mb-8 leading-relaxed">
-                                    Aapka creator account <span className="text-danger font-bold">SUSPEND / REJECT</span> kar diya gaya hai. <br/>
-                                    Naye tournaments create karne ke liye admin se contact kare.
-                                </p>
-                                <div className="p-5 bg-white/5 rounded-2xl border border-white/5 w-100">
-                                    <p className="text-xs uppercase tracking-widest text-muted mb-4 font-bold">Contact Admin to Reactivate</p>
-                                    <a 
-                                        href="https://instagram.com/karan_ak_1513" 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="btn btn-primary w-100 d-flex align-center justify-center gap-2"
-                                    >
-                                        <Users size={18} /> CONTACT ON INSTAGRAM
-                                    </a>
-                                </div>
-                            </motion.div>
-                        ) : (!isAdmin && !isCreator) ? (
-                            <motion.div
-                                key="not-creator"
-                                className="ct-suspended-notice flex flex-col items-center justify-center p-8 text-center"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                            >
-                                <div className="mb-6 bg-primary/10 p-5 rounded-full">
-                                    <Shield size={64} className="text-primary" />
-                                </div>
-                                <h3 className="text-2xl font-black mb-3 text-white">CREATOR ONLY</h3>
-                                <p className="text-gray-400 mb-8 leading-relaxed">
-                                    Only approved creators can host tournaments. <br/>
-                                    If you want to host matches, please apply for Creator access.
-                                </p>
-                                <div className="p-5 bg-white/5 rounded-2xl border border-white/5 w-100">
-                                    <a 
-                                        href="https://instagram.com/karan_ak_1513" 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="btn btn-primary w-100 d-flex align-center justify-center gap-2"
-                                    >
-                                        APPLY FOR CREATOR
-                                    </a>
-                                </div>
-                            </motion.div>
-                        ) : done ? (
+                        {done ? (
                             <motion.div
                                 key="done"
                                 className="ct-success"
@@ -185,8 +135,8 @@ const CreateTournamentModal = ({ onClose }) => {
                                 animate={{ opacity: 1, scale: 1 }}
                             >
                                 <div className="ct-success-icon"><CheckCircle size={48} /></div>
-                                <h3>Tournament Created!</h3>
-                                <p>Your arena is now live and ready for warriors.</p>
+                                <h3>Tournament Updated!</h3>
+                                <p>Changes have been saved successfully.</p>
                             </motion.div>
                         ) : (
                             <motion.form
@@ -321,13 +271,13 @@ const CreateTournamentModal = ({ onClose }) => {
                                             <label className={labelClass}>Upload QR Code (Optional)</label>
                                             <div className="ct-file-upload">
                                                 <Upload size={20} className="text-muted" />
-                                                <span>Click to upload QR image</span>
+                                                <span>Click to upload / replace QR image</span>
                                                 <input type="file" name="qrCodeImage" accept="image/*" onChange={handleChange} />
                                             </div>
                                             {formData.qrCodeImage && (
                                                 <div className="ct-qr-preview">
                                                     <img src={formData.qrCodeImage} alt="QR Preview" />
-                                                    <span className="text-success">✓ QR uploaded</span>
+                                                    <span className="text-success">✓ QR ready</span>
                                                 </div>
                                             )}
                                         </div>
@@ -339,7 +289,7 @@ const CreateTournamentModal = ({ onClose }) => {
                 </div>
 
                 {/* Footer Navigation */}
-                {!done && !isSuspended && (
+                {!done && (
                     <div className="ct-footer">
                         <button
                             type="button"
@@ -370,11 +320,12 @@ const CreateTournamentModal = ({ onClose }) => {
                                 className="ct-btn-next ct-btn-submit"
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
+                                style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
                             >
                                 {isSubmitting ? (
-                                    <><span className="ct-spinner" /> Publishing...</>
+                                    <><span className="ct-spinner" /> Saving...</>
                                 ) : (
-                                    <><Zap size={16} /> Publish Arena</>
+                                    <><Edit3 size={16} /> Save Changes</>
                                 )}
                             </button>
                         )}
@@ -385,4 +336,4 @@ const CreateTournamentModal = ({ onClose }) => {
     );
 };
 
-export default CreateTournamentModal;
+export default EditTournamentModal;

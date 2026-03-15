@@ -10,7 +10,7 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const { login, googleLogin, isAdmin } = useAuth();
+    const { login, googleLogin } = useAuth();
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
@@ -98,7 +98,7 @@ const Login = () => {
                     </div>
 
                     <div className="text-right mb-4">
-                        <Link to="/forgot-password" size="sm" className="text-xs text-primary hover-underline">
+                        <Link to="/forgot-password" size="sm" className="forgot-link text-xs">
                             Forgot Password?
                         </Link>
                     </div>

@@ -1,215 +1,251 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Trophy, Crosshair, Users, ChevronRight, Medal } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Trophy, Crosshair, Users, ChevronRight, Calendar, Clock, Target, Flame, DollarSign, Group, Plus, ShieldCheck, Zap, BarChart3, Rocket } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import TournamentCard from '../components/TournamentCard';
+import JoinBattleModal from '../components/JoinBattleModal';
+import MatchRoomModal from '../components/MatchRoomModal';
+import ResultsModal from '../components/ResultsModal';
+import DownloadApp from '../components/DownloadApp';
 import './Home.css';
 
 const Home = () => {
     const { tournaments, users } = useApp();
-    const liveMatches = tournaments.filter(t => t.status === 'live');
-    const upcomingMatches = tournaments.filter(t => t.status === 'upcoming');
-    const completedMatches = tournaments.filter(t => t.status === 'completed');
+    const { currentUser } = useAuth();
+    const navigate = useNavigate();
+    
+    const [selectedTournament, setSelectedTournament] = useState(null);
+    const [matchRoomTournament, setMatchRoomTournament] = useState(null);
+    const [resultsTournament, setResultsTournament] = useState(null);
+    const [currentTime, setCurrentTime] = useState(Date.now());
 
-    // Calculate total prizes for display
-    const totalPrizesCount = completedMatches.length * 500; // Mock calculation based on match count
-    const totalPlayersCount = users.length > 0 ? users.length + 50 : 0;
-    const totalMatchesCount = tournaments.length;
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
-    const TournamentCard = ({ t }) => (
-        <div key={t.id} className="tournament-card glass-panel">
-            <div className="card-header">
-                <span className={`status-badge ${t.status}`}>
-                    {t.status === 'live' && <span className="live-dot"></span>}
-                    {t.status === 'live' ? 'Live Now' : t.status === 'upcoming' ? 'Upcoming' : 'Completed'}
-                </span>
-                <span className="mode-badge">{t.mode}</span>
-            </div>
-            <div className="card-body">
-                <h3 className="tournament-name">{t.name}</h3>
-                <div className="tournament-schedule text-sm text-muted mb-3">
-                    <p>📅 {t.date} | ⏰ {t.exactTime || t.time}</p>
-                </div>
+    const liveTournaments = tournaments.filter(t => t.status === 'live');
+    const upcomingTournaments = tournaments.filter(t => t.status === 'open' || t.status === 'upcoming');
+    const completedTournaments = tournaments.filter(t => t.status === 'completed');
 
-                {t.status === 'completed' && t.winners ? (
-                    <div className="winners-preview mb-3 p-2 rounded bg-dark-soft border-primary-subtle border">
-                        <div className="d-flex align-center gap-2 text-xs text-warning font-bold mb-1">
-                            <Medal size={14} /> OFFICIAL WINNERS
-                        </div>
-                        <div className="text-sm font-bold text-gradient">
-                            🏆 {t.winners.first}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="tournament-meta">
-                        <div className="meta-item">
-                            <span className="meta-label">Prize Pool</span>
-                            <span className="meta-value text-gradient">{t.prize}</span>
-                        </div>
-                        <div className="meta-item">
-                            <span className="meta-label">Entry Fee</span>
-                            <span className="meta-value">{t.entry}</span>
-                        </div>
-                    </div>
-                )}
-
-                <div className="progress-container">
-                    <div className="progress-labels">
-                        <span>Players Joined</span>
-                        <span>{t.players} / {t.maxPlayers}</span>
-                    </div>
-                    <div className="progress-bar">
-                        <div className="progress-fill" style={{ width: `${(t.players / t.maxPlayers) * 100}%` }}></div>
-                    </div>
-                </div>
-            </div>
-            <div className="card-footer">
-                {t.status === 'completed' ? (
-                    <Link to={`/tournament/${t.id}`} className="btn btn-outline w-100">
-                        View Results
-                    </Link>
-                ) : (
-                    <Link to={`/tournament/${t.id}`} className="btn btn-primary w-100">
-                        Join Match
-                    </Link>
-                )}
-            </div>
-        </div>
-    );
+    // Stats
+    const totalPrizePool = Math.max(5000, tournaments.reduce((acc, t) => {
+        const p = String(t.prizePool || t.prize || '0').replace(/[^0-9]/g, '');
+        return acc + (Number(p) || 0);
+    }, 0));
+    const totalPlayers = users.length + 120; // Simulated community size
 
     return (
-        <div className="home-page">
+        <div className="home-container">
             {/* Hero Section */}
-            <section className="hero">
-                <div className="hero-overlay"></div>
-                <div className="container hero-content">
-                    <div className="hero-badge glass-panel">🔥 Pro Esports Platform</div>
-                    <h1 className="hero-title">
-                        Dominate The <span className="text-gradient">Battleground</span>
-                    </h1>
-                    <p className="hero-subtitle">
-                        Join premium Free Fire tournaments, compete with the best players, and win massive cash prizes daily.
-                    </p>
-                    <div className="hero-actions">
-                        <Link to="/tournaments" className="btn btn-primary btn-lg">
-                            <Crosshair size={20} /> Join Tournament
-                        </Link>
-                        <Link to="/how-to-play" className="btn btn-outline btn-lg">
-                            <Users size={20} /> How It Works
-                        </Link>
-                    </div>
+            <section className="hero-section">
+                <div className="container hero-inner">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="hero-text"
+                    >
+                        <span className="hero-badge">
+                            <Flame size={14} /> The Ultimate Battleground
+                        </span>
+                        <h1 className="hero-title">
+                            Play Free Fire Tournaments <br />
+                            <span className="text-gradient">& Win Real Cash</span>
+                        </h1>
+                        <p className="hero-subtitle">
+                            Join competitive custom room matches, climb the leaderboard, and earn rewards daily. Professional management for serious players.
+                        </p>
+                        <div className="hero-btns">
+                            <Link to="/tournaments" className="btn btn-primary btn-lg">
+                                <Crosshair size={22} /> Join Tournament
+                            </Link>
+                            <Link to="/leaderboard" className="btn btn-secondary btn-lg">
+                                <Trophy size={22} /> View Leaderboard
+                            </Link>
+                        </div>
+                    </motion.div>
 
-                    <div className="hero-stats glass-panel">
-                        <div className="stat-item">
-                            <h4>{totalPlayersCount}+</h4>
-                            <p>Active Players</p>
+                    <div className="hero-stats">
+                        <div className="stat-card">
+                            <span className="stat-value">{upcomingTournaments.length + liveTournaments.length}</span>
+                            <span className="stat-label">Active Tournaments</span>
                         </div>
-                        <div className="stat-item">
-                            <h4>₹{totalPrizesCount}+</h4>
-                            <p>Prizes Won</p>
+                        <div className="stat-card">
+                            <span className="stat-value">{totalPlayers}+</span>
+                            <span className="stat-label">Total Players</span>
                         </div>
-                        <div className="stat-item">
-                            <h4>{totalMatchesCount}+</h4>
-                            <p>Matches Hosted</p>
+                        <div className="stat-card">
+                            <span className="stat-value">₹{totalPrizePool.toLocaleString()}</span>
+                            <span className="stat-label">Total Prize Pool</span>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Live Matches */}
-            <section className="section tournaments-section">
+            {/* Live Matches Section */}
+            {liveTournaments.length > 0 && (
+                <section className="section live-matches">
+                    <div className="container">
+                        <div className="section-header">
+                            <h2 className="section-title">
+                                <span className="live-dot"></span> LIVE <span className="text-gradient">MATCHES</span>
+                            </h2>
+                            <p className="section-desc">Battles currently in progress. Approved players can get room details.</p>
+                        </div>
+                        <div className="tournaments-grid">
+                            {liveTournaments.map((t) => (
+                                <TournamentCard 
+                                    key={t.id} 
+                                    t={t} 
+                                    onJoin={() => setSelectedTournament(t)}
+                                    onDetails={() => navigate(`/tournament/${t.id}`)}
+                                    onMatchRoom={() => setMatchRoomTournament(t)}
+                                    onResults={() => setResultsTournament(t)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Featured Tournaments */}
+            <section className="section">
                 <div className="container">
                     <div className="section-header">
-                        <div>
-                            <h2 className="section-title">🔴 LIVE <span className="text-gradient">MATCHES</span></h2>
-                            <p className="text-muted">Matches currently in progress. Watch and learn!</p>
+                        <h2 className="section-title">FEATURED <span className="text-gradient">TOURNAMENTS</span></h2>
+                        <div className="header-actions">
+                            <Link to="/tournaments" className="view-all">View All <ChevronRight size={18} /></Link>
                         </div>
                     </div>
                     <div className="tournaments-grid">
-                        {liveMatches.length === 0 ? (
-                            <div className="text-center p-4 glass-panel w-100" style={{ gridColumn: '1 / -1' }}>
-                                <p className="text-muted">No live matches at the moment.</p>
-                            </div>
+                        {upcomingTournaments.length > 0 ? (
+                            upcomingTournaments.slice(0, 6).map((t) => (
+                                <TournamentCard 
+                                    key={t.id} 
+                                    t={t} 
+                                    onJoin={() => setSelectedTournament(t)}
+                                    onDetails={() => navigate(`/tournament/${t.id}`)}
+                                />
+                            ))
                         ) : (
-                            liveMatches.map(t => <TournamentCard key={t.id} t={t} />)
+                            <div className="empty-state">
+                                <Calendar size={48} />
+                                <p>No tournaments available at the moment. Check back later!</p>
+                            </div>
                         )}
                     </div>
                 </div>
             </section>
 
-            {/* Upcoming Matches */}
-            <section className="section tournaments-section bg-darker">
+            {/* How It Works */}
+            <section className="section steps-section">
                 <div className="container">
-                    <div className="section-header">
-                        <div>
-                            <h2 className="section-title">📅 UPCOMING <span className="text-gradient">MATCHES</span></h2>
-                            <p className="text-muted">Register now before slots are full!</p>
-                        </div>
-                        <Link to="/tournaments" className="btn btn-outline view-all-btn">
-                            View All <ChevronRight size={16} />
-                        </Link>
+                    <div className="section-header centered">
+                        <h2 className="section-title">HOW IT <span className="text-secondary-gradient">WORKS</span></h2>
+                        <p className="section-desc">Join the arena in 4 simple steps</p>
                     </div>
-                    <div className="tournaments-grid">
-                        {upcomingMatches.length === 0 ? (
-                            <div className="text-center p-4 glass-panel w-100" style={{ gridColumn: '1 / -1' }}>
-                                <p className="text-muted">No upcoming tournaments. Stay tuned!</p>
+                    <div className="steps-grid">
+                        <div className="step-card">
+                            <div className="step-num">01</div>
+                            <h3>Join</h3>
+                            <p>Pick a tournament and register with your Free Fire UID.</p>
+                        </div>
+                        <div className="step-card">
+                            <div className="step-num">02</div>
+                            <h3>Payment</h3>
+                            <p>Submit your entry fee and provide the transaction UTR ID.</p>
+                        </div>
+                        <div className="step-card">
+                            <div className="step-num">03</div>
+                            <h3>Approval</h3>
+                            <p>Wait for admin to verify your payment and approve your entry.</p>
+                        </div>
+                        <div className="step-card">
+                            <div className="step-num">04</div>
+                            <h3>Play</h3>
+                            <p>Get room details on match time and dominate the field.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            {/* Download App Section */}
+            <DownloadApp />
+
+            {/* Creator CTA Section */}
+            <section className="section creator-cta-section">
+                <div className="container">
+                    <div className="creator-card-main glass-panel overflow-hidden">
+                        <div className="creator-glow"></div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10 p-8 lg:p-16">
+                            <div>
+                                <span className="hero-badge mb-6" style={{ background: 'rgba(0, 149, 255, 0.1)', color: '#0095ff' }}>ORGANIZERS ONLY</span>
+                                <h2 className="text-4xl lg:text-5xl font-black mb-6">Become a Tournament <span className="text-primary">Creator</span></h2>
+                                <p className="text-muted text-lg mb-8 leading-relaxed">
+                                    If you are a creator or organizer, you can use our platform to host Free Fire tournaments and manage players easily.
+                                </p>
+                                <div className="flex gap-4 flex-wrap">
+                                    <button 
+                                        className="btn btn-primary btn-lg px-8" 
+                                        onClick={() => navigate(currentUser ? '/creator' : '/login')}
+                                    >
+                                        <Plus size={20} className="mr-2" /> Start Creating Tournaments
+                                    </button>
+                                    <Link to="/how-to-play" className="btn btn-secondary btn-lg px-8">
+                                        Learn More
+                                    </Link>
+                                </div>
+                                <p className="mt-8 italic text-sm text-dim">
+                                    "Host tournaments. Build your community. Earn from esports."
+                                </p>
                             </div>
-                        ) : (
-                            upcomingMatches.map(t => <TournamentCard key={t.id} t={t} />)
-                        )}
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {[
+                                    { icon: <Rocket size={20} />, title: "Quick Creation", desc: "Create tournaments in seconds" },
+                                    { icon: <Users size={20} />, title: "Easy Invites", desc: "Manage player join requests" },
+                                    { icon: <ShieldCheck size={20} />, title: "Secure Rooms", desc: "Publish room details safely" },
+                                    { icon: <Zap size={20} />, title: "Fast Results", desc: "Upload match results instantly" },
+                                    { icon: <BarChart3 size={20} />, title: "Profit Tracking", desc: "Track revenue and profits" },
+                                    { icon: <Target size={20} />, title: "Admin Tools", desc: "Manage player approvals easily" }
+                                ].map((feature, i) => (
+                                    <div key={i} className="feature-mini-card">
+                                        <div className="f-icon">{feature.icon}</div>
+                                        <div>
+                                            <h4 className="text-sm font-bold m-0">{feature.title}</h4>
+                                            <span className="text-xs text-muted">{feature.desc}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* Completed Matches */}
-            <section className="section tournaments-section">
-                <div className="container">
-                    <div className="section-header">
-                        <div>
-                            <h2 className="section-title">🏆 COMPLETED <span className="text-gradient">MATCHES</span></h2>
-                            <p className="text-muted">Browse past winners and results.</p>
-                        </div>
-                    </div>
-                    <div className="tournaments-grid">
-                        {completedMatches.length === 0 ? (
-                            <div className="text-center p-4 glass-panel w-100" style={{ gridColumn: '1 / -1' }}>
-                                <p className="text-muted">No matches completed yet.</p>
-                            </div>
-                        ) : (
-                            completedMatches.slice(0, 3).map(t => <TournamentCard key={t.id} t={t} />)
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            {/* Why Choose Us */}
-            <section className="section bg-darker">
-                <div className="container">
-                    <h2 className="section-title text-center mb-5">Why Play on <span className="text-gradient">FireBattle</span></h2>
-                    <div className="features-grid">
-                        <div className="feature-card glass-panel text-center">
-                            <div className="feature-icon mb-4">
-                                <Trophy size={40} className="text-warning" />
-                            </div>
-                            <h3>Instant Withdrawals</h3>
-                            <p className="text-muted mt-2">Win a match and withdraw your earnings instantly via UPI or Paytm.</p>
-                        </div>
-                        <div className="feature-card glass-panel text-center">
-                            <div className="feature-icon mb-4">
-                                <Crosshair size={40} className="text-primary" />
-                            </div>
-                            <h3>Anti-Cheat System</h3>
-                            <p className="text-muted mt-2">Strict rules and monitoring to ensure fair play for every participant.</p>
-                        </div>
-                        <div className="feature-card glass-panel text-center">
-                            <div className="feature-icon mb-4">
-                                <Users size={40} className="text-secondary" />
-                            </div>
-                            <h3>24/7 Support</h3>
-                            <p className="text-muted mt-2">Our dedicated team is always available to resolve your queries.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            {/* Modals */}
+            <AnimatePresence>
+                {selectedTournament && (
+                    <JoinBattleModal 
+                        tournament={selectedTournament} 
+                        onClose={() => setSelectedTournament(null)} 
+                    />
+                )}
+                {matchRoomTournament && (
+                    <MatchRoomModal 
+                        tournament={matchRoomTournament} 
+                        onClose={() => setMatchRoomTournament(null)} 
+                    />
+                )}
+                {resultsTournament && (
+                    <ResultsModal
+                        tournament={resultsTournament}
+                        onClose={() => setResultsTournament(null)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

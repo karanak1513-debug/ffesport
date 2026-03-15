@@ -5,12 +5,13 @@ import {
     signInWithEmailAndPassword, 
     createUserWithEmailAndPassword,
     signInWithPopup,
+    signInAnonymously,
     signOut,
     sendPasswordResetEmail,
     updateProfile,
     sendEmailVerification
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../firebase';
 
 const AuthContext = createContext();
@@ -27,7 +28,9 @@ export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
     const [userData, setUserData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
+    const isAdmin   = userData ? (userData.role === 'admin'   || ADMIN_EMAILS.includes(currentUser?.email)) : false;
+    const isCreator = userData ? (userData.role === 'creator' && !isAdmin) : false;
+    const isSuspended = userData ? (userData.status?.toLowerCase() === 'suspended') : false;
 
     // Sync Firestore User Data
     const syncUserData = async (user) => {
@@ -37,27 +40,23 @@ export const AuthProvider = ({ children }) => {
         
         if (userSnap.exists()) {
             const data = userSnap.data();
-            // Force role to admin if in hardcoded list
+            // Critical Fix: If user is in ADMIN_EMAILS but document says otherwise, sync it now
             if (ADMIN_EMAILS.includes(user.email) && data.role !== 'admin') {
-                const updatedData = { ...data, role: 'admin' };
-                await setDoc(userRef, { role: 'admin' }, { merge: true });
-                setUserData(updatedData);
-            } else {
-                setUserData(data);
+                console.log("Force syncing admin role for master account:", user.email);
+                await updateDoc(userRef, { role: 'admin' });
+                data.role = 'admin';
             }
+            setUserData(data);
         } else {
             const newUser = {
                 uid: user.uid,
                 email: user.email,
-                username: user.displayName || user.email.split('@')[0],
-                profilePhoto: user.photoURL || '',
-                role: ADMIN_EMAILS.includes(user.email) ? 'admin' : 'user',
-                status: 'Active',
-                joinedAt: serverTimestamp(),
-                realName: '',
-                freeFireUID: '',
-                gameName: '',
-                phone: ''
+                username: user.displayName || user.email?.split('@')[0] || 'Warrior',
+                profilePhoto: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
+                role: ADMIN_EMAILS.includes(user.email) ? 'admin' : 'player',
+                status: 'active',
+                createdAt: serverTimestamp(),
+                joinedAt: serverTimestamp(), // keeping for compatibility
             };
             await setDoc(userRef, newUser);
             setUserData(newUser);
@@ -72,27 +71,33 @@ export const AuthProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        let unsubscribeDoc = null;
+        const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
             setCurrentUser(user);
             if (user) {
+                // Initial sync
                 await syncUserData(user);
-                // The role will be set in syncUserData or fetched from Firestore
+                
+                // Real-time listener for status/role changes
+                unsubscribeDoc = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+                    if (doc.exists()) {
+                        setUserData(doc.data());
+                    }
+                });
             } else {
                 setUserData(null);
-                setIsAdmin(false);
+                if (unsubscribeDoc) unsubscribeDoc();
             }
             setIsLoading(false);
         });
-        return unsubscribe;
+        
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribeDoc) unsubscribeDoc();
+        };
     }, []);
 
-    useEffect(() => {
-        if (userData) {
-            setIsAdmin(userData.role === 'admin' || ADMIN_EMAILS.includes(currentUser?.email));
-        } else {
-            setIsAdmin(false);
-        }
-    }, [userData, currentUser]);
+
 
     const signup = async (email, password, username) => {
         const res = await createUserWithEmailAndPassword(auth, email, password);
@@ -113,10 +118,13 @@ export const AuthProvider = ({ children }) => {
         currentUser,
         userData,
         isAdmin,
+        isCreator,
+        isSuspended,
         isLoading,
         signup,
         login,
         googleLogin,
+        loginAnonymously: () => signInAnonymously(auth),
         logout,
         resetPassword,
         updateUserData
@@ -124,7 +132,7 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {!isLoading && children}
+            {children}
         </AuthContext.Provider>
     );
 };
