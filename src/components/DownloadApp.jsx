@@ -107,12 +107,13 @@ const DownloadApp = () => {
                                 >
                                     <Smartphone className="mr-2" size={20} /> Install Web App
                                 </button>
-                                <button 
+                                <a 
+                                    href="/FireBattle.apk"
                                     className="btn btn-secondary btn-lg"
-                                    onClick={handleApkDownload}
+                                    download="FireBattle.apk"
                                 >
                                     <Package className="mr-2" size={20} /> Download APK
-                                </button>
+                                </a>
                             </div>
 
                             <AnimatePresence>
