@@ -50,8 +50,8 @@ const DownloadApp = () => {
     };
 
     const handleApkDownload = () => {
-        // Points to GitHub Releases for APK hosting (Firebase Spark plan restriction)
-        window.open('https://github.com/karanak1513-debug/ffesport/releases', '_blank');
+        // Direct download link from GitHub
+        window.open('https://github.com/karanak1513-debug/ffesport/raw/main/apk/FireBattle.apk', '_blank');
     };
 
     return (
