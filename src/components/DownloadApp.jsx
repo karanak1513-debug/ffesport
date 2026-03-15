@@ -50,8 +50,8 @@ const DownloadApp = () => {
     };
 
     const handleApkDownload = () => {
-        // Points to public/FireBattle.apk
-        window.open('/FireBattle.apk', '_blank');
+        // Points to GitHub Releases for APK hosting (Firebase Spark plan restriction)
+        window.open('https://github.com/karanak1513-debug/ffesport/releases', '_blank');
     };
 
     return (
