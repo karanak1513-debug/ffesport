@@ -11,6 +11,13 @@
         "source": "**",
         "destination": "/index.html"
       }
+    ],
+    "redirects": [
+      {
+        "source": "/FireBattle.apk",
+        "destination": "https://github.com/karanak1513-debug/ffesport/raw/main/apk/FireBattle.apk",
+        "type": 301
+      }
     ]
   },
   "firestore": {
